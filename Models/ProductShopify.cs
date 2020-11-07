@@ -12,6 +12,7 @@ namespace ShopifyConsole.Models
         public string handle { get; set; }
         public string tags { get; set; }
         public List<Variant> variants { get; set; }
+        public List<Option> options { get; set; }
         public ImageShopify image { get; set; }
     }
 }

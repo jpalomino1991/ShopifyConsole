@@ -56,6 +56,7 @@ namespace ShopifyConsole.Models
                                 p.Vendor = product.vendor;
                                 p.ProductType = product.product_type;
                                 p.Tags = product.tags;
+                                p.SKU = product.variants[0].sku.Substring(0,product.variants[0].sku.LastIndexOf("."));
 
                                 context.Add(p);
 
@@ -266,11 +267,51 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public void UpdateProduct()
+        public void UploadProduct()
         {
             try
             {
+                List<ProductKelly> lsParent = new List<ProductKelly>();
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify {DateTime.Now.AddDays(-10).ToString("yyyy/MM/dd")}").ToList();
+                }
 
+                foreach(ProductKelly parent in lsParent)
+                {
+                    ProductShopify ps = new ProductShopify();
+
+                    ps.title = parent.DescripcionPadre;
+                    ps.vendor = parent.Marca;
+                    ps.product_type = parent.SegmentoNivel4;
+                    ps.body_html = "";
+                    ps.tags = parent.SegmentoNivel2 + "," + parent.Color + "," + parent.CodigoProducto + "," + parent.Material + "," + parent.Marca + "," + parent.SegmentoNivel5;
+                    ps.handle = parent.CodigoPadre + "-" + parent.SegmentoNivel4 + "-" + parent.SegmentoNivel2 + "-" + parent.Color + "-" + parent.Marca;
+
+                    List<KellyChild> lsChild = new List<KellyChild>();
+                    using (var context = new Models.AppContext(kellyConnStr))
+                    {
+                        lsChild = context.KellyChild.FromSqlInterpolated($"GetProductInfoForShopify {parent.CodigoPadre}").ToList();
+                    }
+
+                    string talla = String.Join(",", lsChild.Select(r => r.Talla).ToArray());
+                    ps.tags += "," + talla;
+
+                    List<Option> lsOpt = new List<Option>();
+                    Option option = new Option();
+                    option.name = "Size";
+                    option.position = 1;
+                    option.values = talla;
+                    lsOpt.Add(option);
+
+                    ps.options = lsOpt;
+
+                    foreach (KellyChild child in lsChild)
+                    {
+                        Variant variant = new Variant();
+
+                    }
+                }
             }
             catch (Exception e)
             {

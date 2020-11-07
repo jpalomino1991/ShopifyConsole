@@ -14,6 +14,8 @@ namespace ShopifyConsole.Models
         public DbSet<Product> Product { get; set; }
         public virtual DbSet<Stock> Stock { get; set; }
         public virtual DbSet<Price> Price { get; set; }
+        public virtual DbSet<ProductKelly> ProductKelly { get; set; }
+        public virtual DbSet<KellyChild> KellyChild { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<Item> Item { get; set; }
         public DbSet<BillAddress> BillAddress { get; set; }
@@ -39,6 +41,16 @@ namespace ShopifyConsole.Models
                 {
                     eb.HasNoKey();
                     eb.ToTable("Price");
+                })
+                .Entity<ProductKelly>(eb =>
+                {
+                    eb.HasNoKey();
+                    eb.ToTable("ProductKelly");
+                })
+                .Entity<KellyChild>(eb =>
+                {
+                    eb.HasNoKey();
+                    eb.ToTable("KellyChild");
                 });
         }
     }

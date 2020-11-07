@@ -42,9 +42,9 @@ namespace ShopifyConsole
                         Sservice.GetOrders();
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
-                    case "/UPDATE":
+                    case "/UPLOAD":
                         logger.Info("Updating product information at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
-                        Sservice.UpdateProduct();
+                        Sservice.UploadProduct();
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                 }
