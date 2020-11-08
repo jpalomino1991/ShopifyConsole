@@ -48,33 +48,7 @@ namespace ShopifyConsole.Models
                             //context.Database.ExecuteSqlCommand("TRUNCATE TABLE dbo.Product");
                             foreach (ProductShopify product in mp.products)
                             {
-                                logger.Info("Adding Product " + product.title);
-                                Product p = new Product();
-                                p.Id = product.id;
-                                p.Title = product.title;
-                                p.Description = product.body_html;
-                                p.Vendor = product.vendor;
-                                p.ProductType = product.product_type;
-                                p.Tags = product.tags;
-                                p.SKU = product.variants[0].sku.Substring(0,product.variants[0].sku.LastIndexOf("."));
-
-                                context.Add(p);
-
-                                foreach (Variant variant in product.variants)
-                                {
-                                    Product child = new Product();
-                                    child.Id = variant.id;
-                                    child.ParentId = variant.product_id;
-                                    child.SKU = variant.sku;
-                                    child.Price = variant.price;
-                                    child.CompareAtPrice = variant.compare_at_price;
-                                    child.Stock = variant.inventory_quantity;
-                                    child.InventoryItemId = variant.inventory_item_id;
-                                    child.Size = variant.option1;
-
-                                    context.Add(child);
-                                }
-                                logger.Info("Product added");
+                                InsertProduct(product,context,false);
                             }
                             context.SaveChanges();
                         }
@@ -90,6 +64,44 @@ namespace ShopifyConsole.Models
                 logger.Error(e, "Error getting products");
                 return;
             }            
+        }
+
+        public void InsertProduct(ProductShopify product,AppContext context,bool inserted)
+        {
+            logger.Info("Inserting Product " + product.title);
+            Product p = new Product();
+            p.Id = product.id;
+            p.Title = product.title;
+            p.Description = product.body_html;
+            p.Vendor = product.vendor;
+            p.Handle = product.handle;
+            p.ProductType = product.product_type;
+            p.Tags = product.tags;
+            p.SKU = product.variants[0].sku.Substring(0, product.variants[0].sku.LastIndexOf("."));
+
+            if (inserted)
+                context.Update(p);
+            else
+                context.Add(p);
+
+            foreach (Variant variant in product.variants)
+            {
+                Product child = new Product();
+                child.Id = variant.id;
+                child.ParentId = variant.product_id;
+                child.SKU = variant.sku;
+                child.Price = variant.price;
+                child.CompareAtPrice = variant.compare_at_price;
+                child.Stock = variant.inventory_quantity;
+                child.InventoryItemId = variant.inventory_item_id;
+                child.Size = variant.option1;
+
+                if (inserted)
+                    context.Update(child);
+                else
+                    context.Add(child);
+            }
+            logger.Info("Product inserted");
         }
 
         public void UpdateStock()
@@ -144,25 +156,13 @@ namespace ShopifyConsole.Models
                     {
                         logger.Info("Updating product price : " + product.CodigoSistema);
                         Console.WriteLine("Updating product price : " + product.CodigoSistema);
-                        string compare_price = "";
-                        DateTime fechaFin = product.FinPromocion.AddDays(1).AddTicks(-1);
-                        if (product.InicioPromocion <= DateTime.Now && DateTime.Now <= fechaFin)
-                        {
-                            if (product.PermitePromocion == "Si")
-                            {
-                                decimal promocion = product.Promocion / 100;
-                                if (promocion > 0)
-                                {
-                                    compare_price = (product.PrecioTV * (1 - promocion)).ToString();
-                                }
-                            }
-                        }                        
+                        string compare_price = GetPromoPrice(product.InicioPromocion,product.FinPromocion,product.PermitePromocion,product.PrecioTV,product.Promocion);
                         dynamic JProduct = new
                         {
                             variant = new {
                                 id = product.Id,
-                                price = product.PrecioTV,
-                                compare_at_price = compare_price
+                                price = compare_price == "" ? product.PrecioTV : decimal.Parse(compare_price),
+                                compare_at_price = compare_price == "" ? compare_price : product.PrecioTV.ToString()
                             }
                         };
                         IRestResponse response = CallShopify("variants/" + product.Id + ".json", Method.PUT, JProduct);
@@ -178,6 +178,25 @@ namespace ShopifyConsole.Models
                 logger.Error(e, "Error updating price");
                 return;
             }
+        }
+
+        public string GetPromoPrice(DateTime beginDate,DateTime endDate,string isPromo,decimal price,decimal discount)
+        {
+            string compare_price = "";
+            DateTime fechaFin = endDate.AddDays(1).AddTicks(-1);
+            if (beginDate <= DateTime.Now && DateTime.Now <= fechaFin)
+            {
+                if (isPromo == "Si")
+                {
+                    decimal promocion = discount / 100;
+                    if (promocion > 0)
+                    {
+                        compare_price = (price * (1 - promocion)).ToString();
+                    }
+                }
+            }
+
+            return compare_price;
         }
 
         public void GetOrders()
@@ -281,17 +300,20 @@ namespace ShopifyConsole.Models
                 {
                     ProductShopify ps = new ProductShopify();
 
-                    ps.title = parent.DescripcionPadre;
-                    ps.vendor = parent.Marca;
-                    ps.product_type = parent.SegmentoNivel4;
-                    ps.body_html = "";
+                    string body = "<table width='100%'><tbody><tr><td><strong>Color: </strong>Camel</td><td><strong>Marca: </strong>{0}</td><td><strong>Taco:&nbsp;</strong>{1}</td></tr><tr><td><strong>Material:<span>&nbsp;</span></strong>{2}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{3}</td><td><strong>Material de Suela:<span>&nbsp;</span></strong>{4}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{5}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{6}</td><td><br></td></tr></tbody></table>";
+
+                    ps.title = parent.Title == null ? parent.DescripcionPadre : parent.Title;
+                    ps.vendor = parent.Vendor == null ? parent.Marca : parent.Vendor;
+                    ps.product_type = parent.ProductType == null ? parent.SegmentoNivel4 : parent.ProductType;
+                    ps.body_html = parent.Description == null ? String.Format(body,parent.Marca,parent.Taco,parent.Material,parent.MaterialInterior,parent.MaterialSuela,parent.HechoEn,parent.CodigoProducto) : parent.Description;
                     ps.tags = parent.SegmentoNivel2 + "," + parent.Color + "," + parent.CodigoProducto + "," + parent.Material + "," + parent.Marca + "," + parent.SegmentoNivel5;
-                    ps.handle = parent.CodigoPadre + "-" + parent.SegmentoNivel4 + "-" + parent.SegmentoNivel2 + "-" + parent.Color + "-" + parent.Marca;
+                    ps.handle = parent.Handle == null ? parent.CodigoPadre + "-" + parent.SegmentoNivel4 + "-" + parent.SegmentoNivel2 + "-" + parent.Color + "-" + parent.Marca : parent.Handle;
+                    ps.id = parent.Id;
 
                     List<KellyChild> lsChild = new List<KellyChild>();
                     using (var context = new Models.AppContext(kellyConnStr))
                     {
-                        lsChild = context.KellyChild.FromSqlInterpolated($"GetProductInfoForShopify {parent.CodigoPadre}").ToList();
+                        lsChild = context.KellyChild.FromSqlInterpolated($"GetProductChildInfo {parent.CodigoPadre}").ToList();
                     }
 
                     string talla = String.Join(",", lsChild.Select(r => r.Talla).ToArray());
@@ -306,16 +328,74 @@ namespace ShopifyConsole.Models
 
                     ps.options = lsOpt;
 
+                    List<Variant> lsVariant = new List<Variant>();
+
                     foreach (KellyChild child in lsChild)
                     {
                         Variant variant = new Variant();
 
+                        string promoPrice = GetPromoPrice(child.InicioPromocion, child.FinPromocion, child.PermitePromocion, child.PrecioTV, child.Promocion);
+                        variant.id = child.Id;
+                        variant.sku = child.CodigoSistema;
+                        variant.price = promoPrice == "" ? child.PrecioTV : decimal.Parse(promoPrice);
+                        variant.option1 = child.Talla.ToString();
+                        variant.inventory_quantity = child.StockTotal;
+                        variant.compare_at_price = promoPrice == "" ? promoPrice : child.PrecioTV.ToString();
+                        lsVariant.Add(variant);
+                    }
+
+                    ps.variants = lsVariant;
+
+                    dynamic oJson = new
+                    {
+                        product = ps
+                    };
+
+                    if(parent.Id != null)
+                    {
+                        IRestResponse response = CallShopify("products/" + parent.Id + ".json", Method.PUT, oJson);
+                        if (response.StatusCode.ToString().Equals("OK"))
+                        {
+                            MasterProduct mp = JsonConvert.DeserializeObject<MasterProduct>(response.Content);
+                            if (mp.product != null)
+                            {
+                                logger.Info("Uploading product: " + parent.CodigoPadre);
+                                using (var context = new Models.AppContext(kellyConnStr))
+                                {
+                                    InsertProduct(mp.product, context, true);
+                                    context.SaveChanges();
+                                }
+                                logger.Info("Product uploaded");
+                            }
+                        }                            
+                        else
+                            logger.Error("Error uploading product: " + response.ErrorMessage);
+                    }
+                    else
+                    {
+                        IRestResponse response = CallShopify("products.json", Method.POST, oJson);
+                        if (response.StatusCode.ToString().Equals("Created"))
+                        {
+                            MasterProduct mp = JsonConvert.DeserializeObject<MasterProduct>(response.Content);
+                            if(mp.product != null)
+                            {
+                                logger.Info("Uploading product: " + parent.CodigoPadre);
+                                using (var context = new Models.AppContext(kellyConnStr))
+                                {
+                                    InsertProduct(mp.product, context, false);
+                                    context.SaveChanges();
+                                }
+                                logger.Info("Product uploaded");
+                            }
+                        }                            
+                        else
+                            logger.Error("Error uploading product: " + response.ErrorMessage);
                     }
                 }
             }
             catch (Exception e)
             {
-                logger.Error(e,"Error updating product information");
+                logger.Error(e,"Error uploading product");
                 return;
             }
         }

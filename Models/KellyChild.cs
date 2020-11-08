@@ -8,7 +8,7 @@ namespace ShopifyConsole.Models
     {        
         public string CodigoPadre { get; set; }
         public string CodigoSistema { get; set; }
-        public int Talla { get; set; }
+        public string Talla { get; set; }
         public decimal PrecioTV { get; set; }
         public string PermitePromocion { get; set; }
         public decimal Promocion { get; set; }
@@ -16,5 +16,10 @@ namespace ShopifyConsole.Models
         public DateTime FinPromocion { get; set; }
         public int StockTotal { get; set; }
         public string Id { get; set; }
+        public string CompareAtPrice { get; set; }
+        public decimal Price { get; set; }
+        public string Size { get; set; }
+        public string SKU { get; set; }
+        public int Stock { get; set; }
     }
 }

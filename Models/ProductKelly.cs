@@ -9,6 +9,7 @@ namespace ShopifyConsole.Models
         public string CodigoPadre { get; set; }
         public string DescripcionPadre { get; set; }        
         public string CodigoProducto { get; set; }
+        public string Taco { get; set; }
         public string Material { get; set; }
         public string MaterialSuela { get; set; }
         public string MaterialInterior { get; set; }
@@ -22,6 +23,11 @@ namespace ShopifyConsole.Models
         public string SegmentoNivel4 { get; set; }
         public string SegmentoNivel5 { get; set; }
         public string Id { get; set; }
-
+        public string Description { get; set; }
+        public string Handle { get; set; }
+        public string ProductType { get; set; }
+        public string Tags { get; set; }
+        public string Title { get; set; }
+        public string Vendor { get; set; }
     }
 }

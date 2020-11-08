@@ -18,7 +18,7 @@ namespace ShopifyConsole.Models
         public string InventoryItemId { get; set; }
         public int Stock { get; set; }
         public decimal Price { get; set; }
-        public decimal? CompareAtPrice { get; set; }
+        public string CompareAtPrice { get; set; }
         public string SKU { get; set; }
         public string Size { get; set; }
     }
