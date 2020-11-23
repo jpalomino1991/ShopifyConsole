@@ -6,7 +6,7 @@ namespace ShopifyConsole.Models
 {
     public class ImageShopify
     {
-        public string alt { get; set; }
-        public string src { get; set; }
+        public string attachment { get; set; }
+        public string filename { get; set; }
     }
 }

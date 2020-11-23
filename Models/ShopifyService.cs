@@ -6,7 +6,9 @@ using RestSharp.Authenticators;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
+using System.Net;
 
 namespace ShopifyConsole.Models
 {
@@ -19,6 +21,9 @@ namespace ShopifyConsole.Models
         private string kellyConnStr;
         private string locationId;
         private readonly Logger logger;
+        private string remotePath;
+        private string smtpUser;
+        private string smtpPass;
         public ShopifyService(string webURL,string webAPI,string webPassword,string kellyConnStr,string locationId,Logger logger)
         {
             this.webURL = webURL;
@@ -27,6 +32,10 @@ namespace ShopifyConsole.Models
             this.kellyConnStr = kellyConnStr;
             this.locationId = locationId;
             this.logger = logger;
+
+            this.remotePath = Environment.GetEnvironmentVariable("RemotePath");
+            this.smtpUser = Environment.GetEnvironmentVariable("SMTPUser");
+            this.smtpPass = Environment.GetEnvironmentVariable("SMTPPassword");
         }
         public void GetProducts()
         {
@@ -111,7 +120,7 @@ namespace ShopifyConsole.Models
                 List<Stock> lsStock = new List<Stock>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    lsStock = context.Stock.FromSqlInterpolated($"GetStockForShopify {DateTime.Now.ToString("yyyy/MM/dd")}").ToList();
+                    lsStock = context.Stock.FromSqlInterpolated($"GetStockForShopify {DateTime.Now.AddDays(-10).ToString("yyyy/MM/dd")}").ToList();
                 }                
 
                 if (lsStock.Count > 0)
@@ -180,11 +189,13 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public string GetPromoPrice(DateTime beginDate,DateTime endDate,string isPromo,decimal price,decimal discount)
+        public string GetPromoPrice(string beginDate,string endDate,string isPromo,decimal price,decimal discount)
         {
             string compare_price = "";
-            DateTime fechaFin = endDate.AddDays(1).AddTicks(-1);
-            if (beginDate <= DateTime.Now && DateTime.Now <= fechaFin)
+            if (string.IsNullOrEmpty(beginDate))
+                return compare_price;
+            DateTime fechaFin = DateTime.Parse(endDate).AddDays(1).AddTicks(-1);
+            if (DateTime.Parse(beginDate) <= DateTime.Now && DateTime.Now <= fechaFin)
             {
                 if (isPromo == "Si")
                 {
@@ -293,7 +304,7 @@ namespace ShopifyConsole.Models
                 List<ProductKelly> lsParent = new List<ProductKelly>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify {DateTime.Now.AddDays(-10).ToString("yyyy/MM/dd")}").ToList();
+                    lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify {DateTime.Now.AddDays(-15).ToString("yyyy/MM/dd")}").ToList();
                 }
 
                 foreach(ProductKelly parent in lsParent)
@@ -306,18 +317,55 @@ namespace ShopifyConsole.Models
                     ps.vendor = parent.Vendor == null ? parent.Marca : parent.Vendor;
                     ps.product_type = parent.ProductType == null ? parent.SegmentoNivel4 : parent.ProductType;
                     ps.body_html = parent.Description == null ? String.Format(body,parent.Marca,parent.Taco,parent.Material,parent.MaterialInterior,parent.MaterialSuela,parent.HechoEn,parent.CodigoProducto) : parent.Description;
-                    ps.tags = parent.SegmentoNivel2 + "," + parent.Color + "," + parent.CodigoProducto + "," + parent.Material + "," + parent.Marca + "," + parent.SegmentoNivel5;
-                    ps.handle = parent.Handle == null ? parent.CodigoPadre + "-" + parent.SegmentoNivel4 + "-" + parent.SegmentoNivel2 + "-" + parent.Color + "-" + parent.Marca : parent.Handle;
+                    ps.tags = parent.SegmentoNivel2 + "," + parent.Color + "," + parent.CodigoProducto + "," + parent.Material + "," + parent.Marca + "," + parent.SegmentoNivel1 + "," + parent.SegmentoNivel4 + "," + parent.SegmentoNivel5 + "," + parent.CodigoPadre;
+                    ps.handle = parent.Handle == null ? parent.CodigoProducto + "-" + parent.SegmentoNivel4 + "-" + parent.SegmentoNivel2 + "-" + parent.Color + "-" + parent.Marca : parent.Handle;
                     ps.id = parent.Id;
+                    ps.metafields_global_description_tag = parent.Campaña + " " + parent.SegmentoNivel2 + " " + parent.SegmentoNivel5 + " " + parent.CodigoProducto + " " + parent.Material + " " + parent.Color + " " + parent.Vendor;
+                    ps.metafields_global_title_tag = parent.SegmentoNivel5 + " " + parent.CodigoProducto + " " + parent.Material + " " + parent.Color + " " + parent.Marca;
 
                     List<KellyChild> lsChild = new List<KellyChild>();
+                    List<ProductImage> lstImage = new List<ProductImage>();
                     using (var context = new Models.AppContext(kellyConnStr))
                     {
                         lsChild = context.KellyChild.FromSqlInterpolated($"GetProductChildInfo {parent.CodigoPadre}").ToList();
+                        lstImage = context.ProductImage.Where(i => i.name.Contains(parent.CodigoPadre)).ToList();
                     }
 
                     string talla = String.Join(",", lsChild.Select(r => r.Talla).ToArray());
                     ps.tags += "," + talla;
+
+                    List<ImageShopify> imageShopifies = new List<ImageShopify>();
+
+                    if(lstImage.Count > 0)
+                    {
+                        int i = 1;
+                        foreach(ProductImage image in lstImage)
+                        {
+                            FtpWebRequest request = (FtpWebRequest)WebRequest.Create(remotePath + "/" + image.name);
+                            request.Method = WebRequestMethods.Ftp.DownloadFile;
+                            request.Credentials = new NetworkCredential(smtpUser, smtpPass);
+                            FtpWebResponse response = (FtpWebResponse)request.GetResponse();
+
+                            Stream responseStream = response.GetResponseStream();
+                            byte[] bytes;
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                responseStream.CopyTo(memoryStream);
+                                bytes = memoryStream.ToArray();
+                            }
+
+                            string img = Convert.ToBase64String(bytes);
+
+                            ImageShopify imgS = new ImageShopify();
+                            imgS.attachment = img;
+                            imgS.filename = ps.metafields_global_title_tag.ToUpper().Replace(" ","_") + "_" + i + ".jpg";
+
+                            imageShopifies.Add(imgS);
+                            i++;
+                        }
+                    }
+
+                    ps.images = imageShopifies;
 
                     List<Option> lsOpt = new List<Option>();
                     Option option = new Option();
@@ -340,6 +388,7 @@ namespace ShopifyConsole.Models
                         variant.price = promoPrice == "" ? child.PrecioTV : decimal.Parse(promoPrice);
                         variant.option1 = child.Talla.ToString();
                         variant.inventory_quantity = child.StockTotal;
+                        variant.inventory_management = "shopify";
                         variant.compare_at_price = promoPrice == "" ? promoPrice : child.PrecioTV.ToString();
                         lsVariant.Add(variant);
                     }
@@ -424,6 +473,48 @@ namespace ShopifyConsole.Models
             {
                 logger.Error(e, "Error calling API");
                 return null;
+            }
+        }
+
+        public void getProductImage()
+        {
+            try
+            {
+                logger.Info("Connecting to smtp server");
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create(remotePath);
+                request.Method = WebRequestMethods.Ftp.ListDirectory;
+                request.Credentials = new NetworkCredential(smtpUser, smtpPass);
+                logger.Info("Successful");
+                FtpWebResponse response = (FtpWebResponse)request.GetResponse();
+
+                Stream responseStream = response.GetResponseStream();
+                StreamReader reader = new StreamReader(responseStream);
+
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    string line = reader.ReadLine();
+                    while (!string.IsNullOrEmpty(line))
+                    {
+                        if (line.Contains(".jpg"))
+                        {
+                            logger.Info($"Getting image: {line}");
+                            ProductImage img = new ProductImage();
+                            img.name = line;
+                            context.ProductImage.Add(img);
+                        }
+                        line = reader.ReadLine();
+                    }
+                    context.SaveChanges();
+                }
+
+                reader.Close();
+                responseStream.Close();
+                response.Close();
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error getting product image");
+                return;
             }
         }
     }

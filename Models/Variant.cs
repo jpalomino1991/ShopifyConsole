@@ -13,6 +13,7 @@ namespace ShopifyConsole.Models
         public string compare_at_price { get; set; }
         public string option1 { get; set; }
         public string inventory_item_id { get; set; }
+        public string inventory_management { get; set; }
         public int inventory_quantity { get; set; }        
     }
 }

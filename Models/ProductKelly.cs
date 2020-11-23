@@ -17,6 +17,8 @@ namespace ShopifyConsole.Models
         public string Proveedor { get; set; }
         public string Marca { get; set; }
         public string Color { get; set; }
+        public string ColorPrimario { get; set; }
+        public string Campaña { get; set; }
         public string SegmentoNivel1 { get; set; }
         public string SegmentoNivel2 { get; set; }
         public string SegmentoNivel3 { get; set; }

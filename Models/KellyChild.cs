@@ -12,8 +12,8 @@ namespace ShopifyConsole.Models
         public decimal PrecioTV { get; set; }
         public string PermitePromocion { get; set; }
         public decimal Promocion { get; set; }
-        public DateTime InicioPromocion { get; set; }
-        public DateTime FinPromocion { get; set; }
+        public string InicioPromocion { get; set; }
+        public string FinPromocion { get; set; }
         public int StockTotal { get; set; }
         public string Id { get; set; }
         public string CompareAtPrice { get; set; }
