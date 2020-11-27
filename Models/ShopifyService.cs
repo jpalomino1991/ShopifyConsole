@@ -6,6 +6,7 @@ using RestSharp.Authenticators;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -311,17 +312,25 @@ namespace ShopifyConsole.Models
                 {
                     ProductShopify ps = new ProductShopify();
 
-                    string body = "<table width='100%'><tbody><tr><td><strong>Color: </strong>Camel</td><td><strong>Marca: </strong>{0}</td><td><strong>Taco:&nbsp;</strong>{1}</td></tr><tr><td><strong>Material:<span>&nbsp;</span></strong>{2}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{3}</td><td><strong>Material de Suela:<span>&nbsp;</span></strong>{4}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{5}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{6}</td><td><br></td></tr></tbody></table>";
-
-                    ps.title = parent.Title == null ? parent.DescripcionPadre : parent.Title;
+                    string body = "<table width='100%'><tbody><tr><td><strong>Color: </strong>Camel</td><td><strong>Marca: </strong>{0}</td><td><strong>Taco:&nbsp;</strong>{1}</td></tr>" +
+                        "<tr><td><strong>Material:<span>&nbsp;</span></strong>{2}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{3}</td><td><strong>Material de Suela:<span>" +
+                        "&nbsp;</span></strong>{4}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{5}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{6}</td><td><br></td>" +
+                        "</tr></tbody></table>";
+                                                            
                     ps.vendor = parent.Vendor == null ? parent.Marca : parent.Vendor;
                     ps.product_type = parent.ProductType == null ? parent.SegmentoNivel4 : parent.ProductType;
                     ps.body_html = parent.Description == null ? String.Format(body,parent.Marca,parent.Taco,parent.Material,parent.MaterialInterior,parent.MaterialSuela,parent.HechoEn,parent.CodigoProducto) : parent.Description;
-                    ps.tags = parent.SegmentoNivel2 + "," + parent.Color + "," + parent.CodigoProducto + "," + parent.Material + "," + parent.Marca + "," + parent.SegmentoNivel1 + "," + parent.SegmentoNivel4 + "," + parent.SegmentoNivel5 + "," + parent.CodigoPadre;
-                    ps.handle = parent.Handle == null ? parent.CodigoProducto + "-" + parent.SegmentoNivel4 + "-" + parent.SegmentoNivel2 + "-" + parent.Color + "-" + parent.Marca : parent.Handle;
+                    ps.tags = $"{parent.SegmentoNivel2},{parent.Color},{parent.CodigoProducto},{parent.Material},{parent.Marca},{parent.SegmentoNivel1},{parent.SegmentoNivel4},{parent.SegmentoNivel5},{parent.CodigoPadre}";
+                    ps.handle = parent.Handle == null ? $"{parent.CodigoProducto}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{parent.Color}-{parent.Marca}" : parent.Handle;
                     ps.id = parent.Id;
-                    ps.metafields_global_description_tag = parent.Campaña + " " + parent.SegmentoNivel2 + " " + parent.SegmentoNivel5 + " " + parent.CodigoProducto + " " + parent.Material + " " + parent.Color + " " + parent.Vendor;
-                    ps.metafields_global_title_tag = parent.SegmentoNivel5 + " " + parent.CodigoProducto + " " + parent.Material + " " + parent.Color + " " + parent.Marca;
+                    string cp = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.CodigoProducto.ToLower());
+                    string mat = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Material.ToLower());
+                    string col = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Color.ToLower());
+                    string mar = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Marca.ToLower());
+                    string ven = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Vendor.ToLower());
+                    ps.title = $"{parent.SegmentoNivel1} {col} {cp}";
+                    ps.metafields_global_description_tag = $"{(parent.Campaña == null ? "" : parent.Campaña + " ")} {parent.SegmentoNivel2} {parent.SegmentoNivel5} {col} {mat} {col} {ven}";
+                    ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat}|{col}|{mar}";
 
                     List<KellyChild> lsChild = new List<KellyChild>();
                     List<ProductImage> lstImage = new List<ProductImage>();
@@ -358,7 +367,7 @@ namespace ShopifyConsole.Models
 
                             ImageShopify imgS = new ImageShopify();
                             imgS.attachment = img;
-                            imgS.filename = ps.metafields_global_title_tag.ToUpper().Replace(" ","_") + "_" + i + ".jpg";
+                            imgS.filename = $"{ps.metafields_global_title_tag.ToUpper().Replace(" ","_")}_{i}.jpg";
 
                             imageShopifies.Add(imgS);
                             i++;
@@ -377,6 +386,7 @@ namespace ShopifyConsole.Models
                     ps.options = lsOpt;
 
                     List<Variant> lsVariant = new List<Variant>();
+                    int stock = 0;
 
                     foreach (KellyChild child in lsChild)
                     {
@@ -387,12 +397,17 @@ namespace ShopifyConsole.Models
                         variant.sku = child.CodigoSistema;
                         variant.price = promoPrice == "" ? child.PrecioTV : decimal.Parse(promoPrice);
                         variant.option1 = child.Talla.ToString();
-                        variant.inventory_quantity = child.StockTotal;
+                        variant.inventory_quantity = child.StockTotal <= 0 ? 0 : child.StockTotal;
                         variant.inventory_management = "shopify";
                         variant.compare_at_price = promoPrice == "" ? promoPrice : child.PrecioTV.ToString();
+                        stock += child.StockTotal;
                         lsVariant.Add(variant);
                     }
 
+                    if (stock <= 0)
+                        ps.status = "draft";
+                    else
+                        ps.status = "active";
                     ps.variants = lsVariant;
 
                     dynamic oJson = new

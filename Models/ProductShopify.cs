@@ -12,6 +12,7 @@ namespace ShopifyConsole.Models
         public string product_type { get; set; }
         public string handle { get; set; }
         public string tags { get; set; }
+        public string status { get; set; }
         public string metafields_global_title_tag { get; set; }
         public string metafields_global_description_tag { get; set; }
         public List<Variant> variants { get; set; }
