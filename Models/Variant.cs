@@ -14,6 +14,8 @@ namespace ShopifyConsole.Models
         public string option1 { get; set; }
         public string inventory_item_id { get; set; }
         public string inventory_management { get; set; }
-        public int inventory_quantity { get; set; }        
+        public int inventory_quantity { get; set; }
+        public DateTime created_at { get; set; }
+        public DateTime updated_at { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace ShopifyConsole.Models
@@ -15,6 +16,8 @@ namespace ShopifyConsole.Models
         public string status { get; set; }
         public string metafields_global_title_tag { get; set; }
         public string metafields_global_description_tag { get; set; }
+        public DateTime created_at { get; set; }
+        public DateTime updated_at { get; set; }
         public List<Variant> variants { get; set; }
         public List<Option> options { get; set; }
         public List<ImageShopify> images { get; set; }

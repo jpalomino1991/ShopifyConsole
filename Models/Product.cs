@@ -21,5 +21,10 @@ namespace ShopifyConsole.Models
         public string CompareAtPrice { get; set; }
         public string SKU { get; set; }
         public string Size { get; set; }
+        public string SEOTitle { get; set; }
+        public string SEODescription { get; set; }
+        public string Status { get; set; }
+        public DateTime CreateDate { get; set; }
+        public DateTime UpdateDate { get; set; }
     }
 }

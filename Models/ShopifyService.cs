@@ -78,40 +78,67 @@ namespace ShopifyConsole.Models
 
         public void InsertProduct(ProductShopify product,AppContext context,bool inserted)
         {
-            logger.Info("Inserting Product " + product.title);
-            Product p = new Product();
-            p.Id = product.id;
-            p.Title = product.title;
-            p.Description = product.body_html;
-            p.Vendor = product.vendor;
-            p.Handle = product.handle;
-            p.ProductType = product.product_type;
-            p.Tags = product.tags;
-            p.SKU = product.variants[0].sku.Substring(0, product.variants[0].sku.LastIndexOf("."));
-
-            if (inserted)
-                context.Update(p);
-            else
-                context.Add(p);
-
-            foreach (Variant variant in product.variants)
+            try
             {
-                Product child = new Product();
-                child.Id = variant.id;
-                child.ParentId = variant.product_id;
-                child.SKU = variant.sku;
-                child.Price = variant.price;
-                child.CompareAtPrice = variant.compare_at_price;
-                child.Stock = variant.inventory_quantity;
-                child.InventoryItemId = variant.inventory_item_id;
-                child.Size = variant.option1;
+                logger.Info("Inserting Product " + product.title);                
+
+                Product p = new Product();
+                p.Id = product.id;
+                p.Title = product.title;
+                p.Description = product.body_html;
+                p.Vendor = product.vendor;
+                p.Handle = product.handle;
+                p.ProductType = product.product_type;
+                p.Tags = product.tags;
+                p.SKU = product.variants[0].sku.Substring(0, product.variants[0].sku.LastIndexOf("."));
+                p.Status = product.status;
+                p.CreateDate = product.created_at;
+                p.UpdateDate = product.updated_at;
+
+                IRestResponse response = CallShopify($"products/{product.id}/metafields.json", Method.GET, null);
+                if (response.StatusCode.ToString().Equals("OK"))
+                {
+                    MasterMetafield mm = JsonConvert.DeserializeObject<MasterMetafield>(response.Content);
+                    if (mm.metafields.Count > 0)
+                    {
+                        p.SEODescription = mm.metafields[0].value;
+                        p.SEOTitle = mm.metafields[1].value;
+                    }
+                }
+                else
+                    logger.Error("Error updating stock: " + response.ErrorMessage);
 
                 if (inserted)
-                    context.Update(child);
+                    context.Update(p);
                 else
-                    context.Add(child);
+                    context.Add(p);
+
+                foreach (Variant variant in product.variants)
+                {
+                    Product child = new Product();
+                    child.Id = variant.id;
+                    child.ParentId = variant.product_id;
+                    child.SKU = variant.sku;
+                    child.Price = variant.price;
+                    child.CompareAtPrice = variant.compare_at_price;
+                    child.Stock = variant.inventory_quantity;
+                    child.InventoryItemId = variant.inventory_item_id;
+                    child.Size = variant.option1;
+                    child.CreateDate = variant.created_at;
+                    child.UpdateDate = variant.updated_at;
+
+                    if (inserted)
+                        context.Update(child);
+                    else
+                        context.Add(child);
+                }
+                logger.Info("Product inserted");
             }
-            logger.Info("Product inserted");
+            catch (Exception e)
+            {
+                logger.Error(e, "Error inserting product " + product.id);
+                return;
+            }            
         }
 
         public void UpdateStock()
