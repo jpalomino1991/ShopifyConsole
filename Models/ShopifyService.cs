@@ -559,6 +559,48 @@ namespace ShopifyConsole.Models
                 return;
             }
         }
+
+        public void getProductFilter()
+        {
+            try
+            {
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    logger.Info("Deleting filter table Product");
+                    context.Brand.RemoveRange(context.Brand);
+                    context.ProductType.RemoveRange(context.ProductType);
+                    context.SaveChanges();
+                    logger.Info("Delete Successfully");
+
+                    List<Filter> lstFilter = new List<Filter>();
+
+                    lstFilter = context.Filter.FromSqlInterpolated($"GetProductFilterValues Marca").ToList();
+
+                    foreach(Filter filter in lstFilter)
+                    {
+                        Brand brand = new Brand();
+                        brand.Name = filter.Value;
+                        context.Brand.Add(brand);
+                    }
+
+                    lstFilter = context.Filter.FromSqlInterpolated($"GetProductFilterValues SegmentoNivel4").ToList();
+
+                    foreach (Filter filter in lstFilter)
+                    {
+                        ProductType type = new ProductType();
+                        type.Name = filter.Value;
+                        context.ProductType.Add(type);
+                    }
+
+                    context.SaveChanges();
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error getting products");
+                return;
+            }
+        }
     }
 }
 /*DataSet ds = new DataSet();

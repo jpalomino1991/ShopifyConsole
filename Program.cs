@@ -52,6 +52,11 @@ namespace ShopifyConsole
                         Sservice.getProductImage();
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
+                    case "/PF":
+                        logger.Info("Updating product information at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+                        Sservice.getProductFilter();
+                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+                        break;
                 }
             }
             catch (Exception ex)

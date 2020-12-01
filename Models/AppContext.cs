@@ -17,6 +17,7 @@ namespace ShopifyConsole.Models
         public virtual DbSet<Price> Price { get; set; }
         public virtual DbSet<ProductKelly> ProductKelly { get; set; }
         public virtual DbSet<KellyChild> KellyChild { get; set; }
+        public virtual DbSet<Filter> Filter { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<Item> Item { get; set; }
         public DbSet<BillAddress> BillAddress { get; set; }
@@ -24,6 +25,8 @@ namespace ShopifyConsole.Models
         public DbSet<Customer> Customer { get; set; }
         public DbSet<CustomerAddress> CustomerAddress { get; set; }
         public DbSet<Payment> Payment { get; set; }
+        public DbSet<Brand> Brand { get; set; }
+        public DbSet<ProductType> ProductType { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -52,6 +55,11 @@ namespace ShopifyConsole.Models
                 {
                     eb.HasNoKey();
                     eb.ToTable("KellyChild");
+                })
+                .Entity<Filter>(eb =>
+                {
+                    eb.HasNoKey();
+                    eb.ToTable("Filter");
                 });
         }
     }
