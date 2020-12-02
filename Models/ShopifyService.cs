@@ -332,7 +332,7 @@ namespace ShopifyConsole.Models
                 List<ProductKelly> lsParent = new List<ProductKelly>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify {DateTime.Now.AddDays(-15).ToString("yyyy/MM/dd")}").ToList();
+                    lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify @FechaProducto = {DateTime.Now.AddDays(-15).ToString("yyyy/MM/dd")}").ToList();
                 }
 
                 foreach(ProductKelly parent in lsParent)
@@ -405,7 +405,7 @@ namespace ShopifyConsole.Models
 
                     List<Option> lsOpt = new List<Option>();
                     Option option = new Option();
-                    option.name = "Size";
+                    option.name = "Talla";
                     option.position = 1;
                     option.values = talla;
                     lsOpt.Add(option);
