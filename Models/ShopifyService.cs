@@ -354,9 +354,8 @@ namespace ShopifyConsole.Models
                     string mat = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Material.ToLower());
                     string col = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Color.ToLower());
                     string mar = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Marca.ToLower());
-                    string ven = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Vendor.ToLower());
                     ps.title = $"{parent.SegmentoNivel1} {col} {cp}";
-                    ps.metafields_global_description_tag = $"{(parent.Campaña == null ? "" : parent.Campaña + " ")} {parent.SegmentoNivel2} {parent.SegmentoNivel5} {col} {mat} {col} {ven}";
+                    ps.metafields_global_description_tag = $"{(parent.Campaña == null ? "" : parent.Campaña + " ")} {parent.SegmentoNivel2} {parent.SegmentoNivel5} {col} {mat} {col} {mar}";
                     ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat}|{col}|{mar}";
 
                     List<KellyChild> lsChild = new List<KellyChild>();
@@ -478,7 +477,7 @@ namespace ShopifyConsole.Models
                                 }
                                 logger.Info("Product uploaded");
                             }
-                        }                            
+                        }
                         else
                             logger.Error("Error uploading product: " + response.ErrorMessage);
                     }
