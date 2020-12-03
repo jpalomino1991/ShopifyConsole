@@ -430,7 +430,7 @@ namespace ShopifyConsole.Models
                         lsVariant.Add(variant);
                     }
 
-                    if (stock <= 0)
+                    if (stock <= 0 || lstImage.Count == 0)
                         ps.status = "draft";
                     else
                         ps.status = "active";
