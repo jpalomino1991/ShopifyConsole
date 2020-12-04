@@ -351,9 +351,9 @@ namespace ShopifyConsole.Models
                     ps.handle = parent.Handle == null ? $"{parent.CodigoProducto}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{parent.Color}-{parent.Marca}" : parent.Handle;
                     ps.id = parent.Id;
                     string cp = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.CodigoProducto.ToLower());
-                    string mat = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Material.ToLower());
+                    string mat = parent.Material != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Material.ToLower()) : "";
                     string col = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Color.ToLower());
-                    string mar = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Marca.ToLower());
+                    string mar = parent.Marca != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Marca.ToLower()) : "";
                     ps.title = $"{parent.SegmentoNivel1} {col} {cp}";
                     ps.metafields_global_description_tag = $"{(parent.Campaña == null ? "" : parent.Campaña + " ")} {parent.SegmentoNivel2} {parent.SegmentoNivel5} {col} {mat} {col} {mar}";
                     ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat}|{col}|{mar}";
@@ -416,6 +416,7 @@ namespace ShopifyConsole.Models
 
                     foreach (KellyChild child in lsChild)
                     {
+                        if (child.PrecioTV == 0) continue;
                         Variant variant = new Variant();
 
                         string promoPrice = GetPromoPrice(child.InicioPromocion, child.FinPromocion, child.PermitePromocion, child.PrecioTV, child.Promocion);
@@ -429,6 +430,8 @@ namespace ShopifyConsole.Models
                         stock += child.StockTotal;
                         lsVariant.Add(variant);
                     }
+
+                    if (lsVariant.Count == 0) continue;
 
                     if (stock <= 0 || lstImage.Count == 0)
                         ps.status = "draft";
