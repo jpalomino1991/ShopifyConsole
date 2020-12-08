@@ -351,11 +351,11 @@ namespace ShopifyConsole.Models
                     string col = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Color.ToLower());
                     string mar = parent.Marca != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Marca.ToLower()) : "";
 
-                    ps.vendor = parent.Vendor == null ? mar : parent.Vendor;
-                    ps.product_type = parent.ProductType == null ? parent.SegmentoNivel4 : parent.ProductType;
-                    ps.body_html = parent.Description == null ? String.Format(body,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp) : parent.Description;
-                    ps.tags = $"{parent.SegmentoNivel2},{col},{cp},{mat},{mar},{parent.SegmentoNivel1},{parent.SegmentoNivel4},{parent.SegmentoNivel5},{parent.CodigoPadre}";
-                    ps.handle = parent.Handle == null ? $"{cp}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{col}-{mar}" : parent.Handle;
+                    ps.vendor = mar;
+                    ps.product_type = parent.SegmentoNivel4;
+                    ps.body_html = String.Format(body,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
+                    ps.tags = $"{parent.SegmentoNivel2},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{parent.SegmentoNivel4},{parent.SegmentoNivel5},{parent.CodigoPadre}";
+                    ps.handle = $"{cp}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{col}-{mar}";
                     ps.id = parent.Id;                    
                     ps.title = $"{parent.SegmentoNivel1} {col} {cp}";
                     ps.metafields_global_description_tag = $"{(parent.Campaña == null ? "" : parent.Campaña + " ")} {parent.SegmentoNivel2} {parent.SegmentoNivel5} {col} {mat} {col} {mar}";
