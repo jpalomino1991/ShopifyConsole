@@ -343,17 +343,20 @@ namespace ShopifyConsole.Models
                         "<tr><td><strong>Material:<span>&nbsp;</span></strong>{2}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{3}</td><td><strong>Material de Suela:<span>" +
                         "&nbsp;</span></strong>{4}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{5}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{6}</td><td><br></td>" +
                         "</tr></tbody></table>";
-                                                            
-                    ps.vendor = parent.Vendor == null ? parent.Marca : parent.Vendor;
-                    ps.product_type = parent.ProductType == null ? parent.SegmentoNivel4 : parent.ProductType;
-                    ps.body_html = parent.Description == null ? String.Format(body,parent.Marca,parent.Taco,parent.Material,parent.MaterialInterior,parent.MaterialSuela,parent.HechoEn,parent.CodigoProducto) : parent.Description;
-                    ps.tags = $"{parent.SegmentoNivel2},{parent.Color},{parent.CodigoProducto},{parent.Material},{parent.Marca},{parent.SegmentoNivel1},{parent.SegmentoNivel4},{parent.SegmentoNivel5},{parent.CodigoPadre}";
-                    ps.handle = parent.Handle == null ? $"{parent.CodigoProducto}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{parent.Color}-{parent.Marca}" : parent.Handle;
-                    ps.id = parent.Id;
+
                     string cp = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.CodigoProducto.ToLower());
-                    string mat = parent.Material != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Material.ToLower()) : "";
+                    string mat = parent.Material != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(string.Join(' ',parent.Material.ToLower().Split('/').ToList())) : "";
+                    string matI = parent.MaterialInterior != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(string.Join(',', parent.MaterialInterior.ToLower().Split('/').ToList())) : "";
+                    string matS = parent.MaterialSuela != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(string.Join(',', parent.MaterialSuela.ToLower().Split('/').ToList())) : "";
                     string col = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Color.ToLower());
                     string mar = parent.Marca != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Marca.ToLower()) : "";
+
+                    ps.vendor = parent.Vendor == null ? mar : parent.Vendor;
+                    ps.product_type = parent.ProductType == null ? parent.SegmentoNivel4 : parent.ProductType;
+                    ps.body_html = parent.Description == null ? String.Format(body,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp) : parent.Description;
+                    ps.tags = $"{parent.SegmentoNivel2},{col},{cp},{mat},{mar},{parent.SegmentoNivel1},{parent.SegmentoNivel4},{parent.SegmentoNivel5},{parent.CodigoPadre}";
+                    ps.handle = parent.Handle == null ? $"{cp}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{col}-{mar}" : parent.Handle;
+                    ps.id = parent.Id;                    
                     ps.title = $"{parent.SegmentoNivel1} {col} {cp}";
                     ps.metafields_global_description_tag = $"{(parent.Campaña == null ? "" : parent.Campaña + " ")} {parent.SegmentoNivel2} {parent.SegmentoNivel5} {col} {mat} {col} {mar}";
                     ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat}|{col}|{mar}";
