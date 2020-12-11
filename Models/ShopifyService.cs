@@ -350,17 +350,47 @@ namespace ShopifyConsole.Models
                     string matS = parent.MaterialSuela != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(string.Join(',', parent.MaterialSuela.ToLower().Split('/').ToList())) : "";
                     string col = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Color.ToLower());
                     string mar = parent.Marca != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Marca.ToLower()) : "";
+                    string oca = parent.Ocasion != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Ocasion.ToLower()) : "";
+                    string ten = parent.Tendencia != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.Tendencia.ToLower()) : "";
+                    string imageName = "";
+                    string sex = parent.SegmentoNivel2;
+                    if (parent.SegmentoNivel2 == "Mujer" && parent.SegmentoNivel3 == "Niña")
+                        sex = "Niñas";
+                    if (parent.SegmentoNivel2 == "Hombre" && parent.SegmentoNivel3 == "Niño")
+                        sex = "Niños";
 
                     ps.vendor = mar;
-                    ps.product_type = parent.SegmentoNivel4;
+                    if(parent.SegmentoNivel4 == "Zapatos")
+                    {
+                        if (parent.SegmentoNivel5 == "Stiletto")
+                            ps.product_type = "Stilettos";
+                        if (parent.SegmentoNivel5 == "Fiesta" || parent.SegmentoNivel5 == "Vestir")
+                            ps.product_type = $"{parent.SegmentoNivel4} de {parent.SegmentoNivel5}";
+                        else
+                            ps.product_type = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5}";
+                    }
+                    else
+                        ps.product_type = parent.SegmentoNivel4;
                     ps.body_html = String.Format(body,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
-                    ps.tags = $"{parent.SegmentoNivel2},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{parent.SegmentoNivel4},{parent.SegmentoNivel5},{parent.CodigoPadre}";
+                    ps.tags = $"{ps.product_type},{parent.SegmentoNivel2},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{parent.SegmentoNivel2},{sex},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca}";
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{col}-{mar}";
-                    ps.id = parent.Id;                    
-                    ps.title = $"{parent.SegmentoNivel1} {col} {cp}";
-                    ps.metafields_global_description_tag = $"{(parent.Campaña == null ? "" : parent.Campaña + " ")} {parent.SegmentoNivel2} {parent.SegmentoNivel5} {col} {mat} {col} {mar}";
-                    ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat}|{col}|{mar}";
+                    ps.id = parent.Id;
+                    if(parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")
+                    {
+                        ps.title = $"{parent.SegmentoNivel4} {col} {cp}";
+                        ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} {parent.SegmentoNivel4} {cp} {mat} {col} {mar}";
+                        ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {cp} {mat} | {col} | {mar}";
+                        imageName = $"{parent.SegmentoNivel4}_{cp}_{mat}_{col}_{mar}";
+                    }
+                    else
+                    {
+                        ps.title = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {col} {cp}";
+                        ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
+                        ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
+                        imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                    }
 
+                    ps.metafields_global_description_tag = ps.metafields_global_description_tag.Trim();
                     List<KellyChild> lsChild = new List<KellyChild>();
                     List<ProductImage> lstImage = new List<ProductImage>();
                     using (var context = new Models.AppContext(kellyConnStr))
@@ -396,7 +426,7 @@ namespace ShopifyConsole.Models
 
                             ImageShopify imgS = new ImageShopify();
                             imgS.attachment = img;
-                            imgS.filename = $"{ps.metafields_global_title_tag.ToUpper().Replace(" ","_")}_{i}.jpg";
+                            imgS.filename = $"{imageName.ToUpper()}_{i}.jpg";
 
                             imageShopifies.Add(imgS);
                             i++;
