@@ -13,13 +13,7 @@ namespace ShopifyConsole
             {
                 string kellyConnString = Environment.GetEnvironmentVariable("KellyConnectionString");
 
-                Web web = new Web();
-                using (var context = new Models.AppContext(kellyConnString))
-                {
-                    web = context.Web.Find(1);
-                }
-
-                ShopifyService Sservice = new ShopifyService(web.WebURL, web.WebAPI, web.WebPassword, kellyConnString, web.LocationId, logger);
+                ShopifyService Sservice = new ShopifyService(kellyConnString, logger);
                 switch (args[0])
                 {
                     case "/GP":

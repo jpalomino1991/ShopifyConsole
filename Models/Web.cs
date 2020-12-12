@@ -13,5 +13,8 @@ namespace ShopifyConsole.Models
         public string WebAPI { get; set; }
         public string WebPassword { get; set; }
         public string LocationId { get; set; }
+        public string SMTPUser { get; set; }
+        public string SMTPPassword { get; set; }
+        public string SMTPURL { get; set; }
     }
 }

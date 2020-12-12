@@ -25,18 +25,22 @@ namespace ShopifyConsole.Models
         private string remotePath;
         private string smtpUser;
         private string smtpPass;
-        public ShopifyService(string webURL,string webAPI,string webPassword,string kellyConnStr,string locationId,Logger logger)
-        {
-            this.webURL = webURL;
-            this.webAPI = webAPI;
-            this.webPassword = webPassword;
-            this.kellyConnStr = kellyConnStr;
-            this.locationId = locationId;
+        public ShopifyService(string kellyConnStr,Logger logger)
+        {            
+            this.kellyConnStr = kellyConnStr;            
             this.logger = logger;
 
-            this.remotePath = Environment.GetEnvironmentVariable("RemotePath");
-            this.smtpUser = Environment.GetEnvironmentVariable("SMTPUser");
-            this.smtpPass = Environment.GetEnvironmentVariable("SMTPPassword");
+            using (var context = new Models.AppContext(kellyConnStr))
+            {
+                Web web = context.Web.Find(1);
+                this.remotePath = web.SMTPURL;
+                this.smtpUser = web.SMTPUser;
+                this.smtpPass = web.SMTPPassword;
+                this.webURL = web.WebURL;
+                this.webAPI = web.WebAPI;
+                this.webPassword = web.WebPassword;
+                this.locationId = web.LocationId;
+            }                
         }
         public void GetProducts()
         {
@@ -384,10 +388,20 @@ namespace ShopifyConsole.Models
                     }
                     else
                     {
-                        ps.title = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {col} {cp}";
-                        ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
-                        ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
-                        imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                        if (parent.SegmentoNivel5 == "Stiletto")
+                        {
+                            ps.title = $"Stilettos {col} {cp}";
+                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} Stilettos {cp} {mat} {col} {mar}";
+                            ps.metafields_global_title_tag = $"Stilettos {cp} {mat} | {col} | {mar}";
+                            imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                        }
+                        else
+                        {
+                            ps.title = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {col} {cp}";
+                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
+                            ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
+                            imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                        }                            
                     }
 
                     ps.metafields_global_description_tag = ps.metafields_global_description_tag.Trim();
@@ -558,6 +572,7 @@ namespace ShopifyConsole.Models
             try
             {
                 logger.Info("Connecting to smtp server");
+                logger.Info(remotePath);
                 FtpWebRequest request = (FtpWebRequest)WebRequest.Create(remotePath);
                 request.Method = WebRequestMethods.Ftp.ListDirectory;
                 request.Credentials = new NetworkCredential(smtpUser, smtpPass);
