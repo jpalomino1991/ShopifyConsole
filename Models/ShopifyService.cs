@@ -145,14 +145,14 @@ namespace ShopifyConsole.Models
             }            
         }
 
-        public void UpdateStock()
+        public void UpdateStock(int days)
         {
             try
             {
                 List<Stock> lsStock = new List<Stock>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    lsStock = context.Stock.FromSqlInterpolated($"GetStockForShopify {DateTime.Now.AddDays(-10).ToString("yyyy/MM/dd")}").ToList();
+                    lsStock = context.Stock.FromSqlInterpolated($"GetStockForShopify {DateTime.Now.AddDays(days * -1).ToString("yyyy/MM/dd")}").ToList();
                 }                
 
                 if (lsStock.Count > 0)
@@ -181,14 +181,14 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public void UpdatePrice()
+        public void UpdatePrice(int days)
         {
             try
             {
                 List<Price> lsPrice = new List<Price>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    lsPrice = context.Price.FromSqlInterpolated($"GetPriceForShopify {DateTime.Now.AddDays(-10).ToString("yyyy/MM/dd")}").ToList();
+                    lsPrice = context.Price.FromSqlInterpolated($"GetPriceForShopify {DateTime.Now.AddDays(days * -1).ToString("yyyy/MM/dd")}").ToList();
                 }
 
                 if (lsPrice.Count > 0)
@@ -242,11 +242,11 @@ namespace ShopifyConsole.Models
             return compare_price;
         }
 
-        public void GetOrders()
+        public void GetOrders(int days)
         {
             try
             {
-                IRestResponse response = CallShopify("orders.json?fulfillment_status=unfulfilled&created_at_min=" + DateTime.Now.AddDays(-20).ToString("yyyy-MM-dd") + "&since_id=0", Method.GET, null);
+                IRestResponse response = CallShopify("orders.json?fulfillment_status=unfulfilled&created_at_min=" + DateTime.Now.AddDays(days * -1).ToString("yyyy-MM-dd") + "&since_id=0", Method.GET, null);
                 if(response.StatusCode.ToString().Equals("OK"))
                 {
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
@@ -342,14 +342,17 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public void UploadProduct()
+        public void UploadProduct(int days,bool all)
         {
             try
             {
                 List<ProductKelly> lsParent = new List<ProductKelly>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify @FechaProducto = {DateTime.Now.AddDays(-15).ToString("yyyy/MM/dd")}").ToList();
+                    if(all)
+                        lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoAllForShopify").ToList();
+                    else
+                        lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify @FechaProducto = {DateTime.Now.AddDays(days * -1).ToString("yyyy/MM/dd")}").ToList();
                 }
 
                 foreach(ProductKelly parent in lsParent)
@@ -597,6 +600,7 @@ namespace ShopifyConsole.Models
 
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
+                    context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE ProductImage");
                     string line = reader.ReadLine();
                     while (!string.IsNullOrEmpty(line))
                     {
