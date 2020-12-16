@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using Newtonsoft.Json.Linq;
 using NLog;
 using ShopifyConsole.Models;
 
@@ -11,7 +13,8 @@ namespace ShopifyConsole
             Logger logger = LogManager.GetCurrentClassLogger();
             try
             {
-                string kellyConnString = Environment.GetEnvironmentVariable("KellyConnectionString");
+                JObject o1 = JObject.Parse(File.ReadAllText("./appSettings.json"));
+                string kellyConnString = o1.First.First.ToString();
 
                 ShopifyService Sservice = new ShopifyService(kellyConnString, logger);
                 int result = 0;
