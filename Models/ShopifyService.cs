@@ -246,47 +246,56 @@ namespace ShopifyConsole.Models
         {
             try
             {
-                IRestResponse response = CallShopify("orders.json?fulfillment_status=unfulfilled&created_at_min=" + DateTime.Now.AddDays(-20).ToString("yyyy-MM-dd") + "&financial_status=paid&since_id=0", Method.GET, null);
+                IRestResponse response = CallShopify("orders.json?fulfillment_status=unfulfilled&created_at_min=" + DateTime.Now.AddDays(-20).ToString("yyyy-MM-dd") + "&since_id=0", Method.GET, null);
                 if(response.StatusCode.ToString().Equals("OK"))
                 {
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
                     if(SO.orders != null)
                     {
-                        string orders = String.Join(",", SO.orders.Select(r => r.id).ToArray());
-                        List<Order> lstOrder = new List<Order>();
-                        using (var context = new Models.AppContext(kellyConnStr))
+                        foreach (Order order in SO.orders)
                         {
-                            lstOrder = context.Orders.Where(o => o.id.Contains(orders)).ToList();
-                            foreach (Order order in SO.orders)
+                            using (var context = new Models.AppContext(kellyConnStr))
                             {
-                                if(lstOrder.Where(or => or.id == order.id).Count() == 0)
+                                Order so = context.Orders.Find(order.id);
+                                if(so == null)
                                 {
                                     logger.Info("Downloading order: " + order.id);
 
+                                    Customer customer = context.Customer.Find(order.customer.id);
+
+                                    if (customer == null)
+                                    {
+                                        context.Customer.Add(order.customer);
+                                        context.SaveChanges();
+                                    }
+                                    else
+                                        context.Customer.Update(customer);
+
+                                    order.customer_id = order.customer.id;
                                     context.Orders.Add(order);
                                     context.SaveChanges();
 
-                                    response = CallShopify("orders/" + order.id + "/transactions.json", Method.GET,null);
+                                    response = CallShopify("orders/" + order.id + "/transactions.json", Method.GET, null);
 
-                                    if(response.StatusCode.ToString().Equals("OK"))
+                                    if (response.StatusCode.ToString().Equals("OK"))
                                     {
                                         MasterPayment mp = JsonConvert.DeserializeObject<MasterPayment>(response.Content);
-                                        if(mp.transactions != null)
+                                        if (mp.transactions != null)
                                         {
-                                            foreach(Payment payment in mp.transactions)
+                                            foreach (Payment payment in mp.transactions)
                                             {
-                                                if(payment.receipt != null)
+                                                if (payment.receipt != null)
                                                 {
                                                     payment.x_account_id = payment.receipt.x_account_id;
                                                     payment.x_signature = payment.receipt.x_signature;
                                                     payment.x_reference = payment.receipt.x_reference;
-                                                }                                                
+                                                }
 
                                                 context.Payment.Add(payment);
                                             }
                                         }
                                     }
-                                    
+
                                     foreach (Item item in order.line_items)
                                     {
                                         item.order_id = order.id;
@@ -302,15 +311,19 @@ namespace ShopifyConsole.Models
                                         context.Item.Add(item);
                                     }
 
-                                    order.customer.order_id = order.id;
                                     order.customer.default_address.customer_id = order.customer.id;
                                     order.billing_address.order_id = order.id;
                                     order.shipping_address.order_id = order.id;
 
                                     context.BillAddress.Add(order.billing_address);
-                                    context.ShipAddress.Add(order.shipping_address);
-                                    context.Customer.Add(order.customer);
-                                    context.CustomerAddress.Add(order.customer.default_address);
+                                    context.ShipAddress.Add(order.shipping_address);                                    
+
+                                    CustomerAddress customerAddress = context.CustomerAddress.Find(order.customer.default_address.id);
+
+                                    if(customerAddress == null)
+                                        context.CustomerAddress.Add(order.customer.default_address);
+                                    else
+                                        context.CustomerAddress.Update(customerAddress);
 
                                     context.SaveChanges();
                                     logger.Info("Downloading successfully");

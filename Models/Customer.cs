@@ -17,6 +17,5 @@ namespace ShopifyConsole.Models
         public string currency { get; set; }
         [NotMapped]
         public CustomerAddress default_address { get; set; }
-        public string order_id { get; set; }
     }
 }

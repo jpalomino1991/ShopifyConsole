@@ -22,6 +22,7 @@ namespace ShopifyConsole.Models
 		public decimal total_line_items_price { get; set; }
 		public string name { get; set; }
 		public string order_number { get; set; }
+		public string customer_id { get; set; }
 		[NotMapped]
 		public ICollection<Item> line_items { get; set; }
 		[NotMapped]
