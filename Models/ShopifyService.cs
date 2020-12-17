@@ -359,9 +359,9 @@ namespace ShopifyConsole.Models
                 {
                     ProductShopify ps = new ProductShopify();
 
-                    string body = "<table width='100%'><tbody><tr><td><strong>Color: </strong>Camel</td><td><strong>Marca: </strong>{0}</td><td><strong>Taco:&nbsp;</strong>{1}</td></tr>" +
-                        "<tr><td><strong>Material:<span>&nbsp;</span></strong>{2}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{3}</td><td><strong>Material de Suela:<span>" +
-                        "&nbsp;</span></strong>{4}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{5}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{6}</td><td><br></td>" +
+                    string body = "<table width='100%'><tbody><tr><td><strong>Color: </strong>{0}</td><td><strong>Marca: </strong>{1}</td><td><strong>Taco:&nbsp;</strong>{2}</td></tr>" +
+                        "<tr><td><strong>Material:<span>&nbsp;</span></strong>{3}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{4}</td><td><strong>Material de Suela:<span>" +
+                        "&nbsp;</span></strong>{5}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{6}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{7}</td><td><br></td>" +
                         "</tr></tbody></table>";
 
                     string cp = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.CodigoProducto.ToLower());
@@ -391,7 +391,7 @@ namespace ShopifyConsole.Models
                     }
                     else
                         ps.product_type = parent.SegmentoNivel4;
-                    ps.body_html = String.Format(body,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
+                    ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
                     ps.tags = $"{ps.product_type},{parent.SegmentoNivel2},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{parent.SegmentoNivel2},{sex},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca}";
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{col}-{mar}";
                     ps.id = parent.Id;
@@ -426,7 +426,7 @@ namespace ShopifyConsole.Models
                     using (var context = new Models.AppContext(kellyConnStr))
                     {
                         lsChild = context.KellyChild.FromSqlInterpolated($"GetProductChildInfo {parent.CodigoPadre}").ToList();
-                        lstImage = context.ProductImage.Where(i => i.name.Contains(parent.CodigoPadre)).ToList();
+                        lstImage = context.ProductImage.Where(i => i.name.Contains(parent.CodigoPadre)).OrderBy(i => i.name).ToList();
                     }
 
                     string talla = String.Join(",", lsChild.Select(r => r.Talla).ToArray());
@@ -450,7 +450,7 @@ namespace ShopifyConsole.Models
                     Option option = new Option();
                     option.name = "Talla";
                     option.position = 1;
-                    option.values = talla;
+                    //option.values = talla;
                     lsOpt.Add(option);
 
                     ps.options = lsOpt;
@@ -506,7 +506,7 @@ namespace ShopifyConsole.Models
                             }
                         }                            
                         else
-                            logger.Error("Error uploading product: " + response.ErrorMessage);
+                            logger.Error("Error uploading product to shopify: " + response.ErrorMessage);
                     }
                     else
                     {
@@ -526,13 +526,13 @@ namespace ShopifyConsole.Models
                             }
                         }
                         else
-                            logger.Error("Error uploading product: " + response.ErrorMessage);
+                            logger.Error("Error uploading product to shopify: " + response.ErrorMessage);
                     }
                 }
             }
             catch (Exception e)
             {
-                logger.Error(e,"Error uploading product");
+                logger.Error(e,"Error uploading product in general");
                 return;
             }
         }
@@ -621,7 +621,7 @@ namespace ShopifyConsole.Models
                     string line = reader.ReadLine();
                     while (!string.IsNullOrEmpty(line))
                     {
-                        if (line.Contains(".jpg"))
+                        if (line.Contains(".jpg") || line.Contains(".png"))
                         {
                             logger.Info($"Getting image: {line}");
                             ProductImage img = new ProductImage();
