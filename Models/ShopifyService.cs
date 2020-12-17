@@ -439,26 +439,7 @@ namespace ShopifyConsole.Models
                         int i = 1;
                         foreach(ProductImage image in lstImage)
                         {
-                            FtpWebRequest request = (FtpWebRequest)WebRequest.Create(remotePath + "/" + image.name);
-                            request.Method = WebRequestMethods.Ftp.DownloadFile;
-                            request.Credentials = new NetworkCredential(smtpUser, smtpPass);
-                            FtpWebResponse response = (FtpWebResponse)request.GetResponse();
-
-                            Stream responseStream = response.GetResponseStream();
-                            byte[] bytes;
-                            using (var memoryStream = new MemoryStream())
-                            {
-                                responseStream.CopyTo(memoryStream);
-                                bytes = memoryStream.ToArray();
-                            }
-
-                            string img = Convert.ToBase64String(bytes);
-
-                            ImageShopify imgS = new ImageShopify();
-                            imgS.attachment = img;
-                            imgS.filename = $"{imageName.ToUpper()}_{i}.jpg";
-
-                            imageShopifies.Add(imgS);
+                            imageShopifies.Add(getImageFromFtp(image,imageName,i));
                             i++;
                         }
                     }
@@ -553,6 +534,42 @@ namespace ShopifyConsole.Models
             {
                 logger.Error(e,"Error uploading product");
                 return;
+            }
+        }
+
+        public ImageShopify getImageFromFtp(ProductImage image,string imageName,int i)
+        {
+            try
+            {
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create(remotePath + "/" + image.name);
+                request.Method = WebRequestMethods.Ftp.DownloadFile;
+                request.Credentials = new NetworkCredential(smtpUser, smtpPass);
+                FtpWebResponse response = (FtpWebResponse)request.GetResponse();
+
+                Stream responseStream = response.GetResponseStream();
+                byte[] bytes;
+                using (var memoryStream = new MemoryStream())
+                {
+                    responseStream.CopyTo(memoryStream);
+                    bytes = memoryStream.ToArray();
+                }
+
+                string img = Convert.ToBase64String(bytes);
+
+                ImageShopify imgS = new ImageShopify();
+                imgS.attachment = img;
+                imgS.filename = $"{imageName.ToUpper()}_{i}.jpg";
+
+                return imgS;
+            }
+            catch (Exception e)
+            {
+                if (e.Message == "Unable to connect to the remote server")
+                {
+                    return getImageFromFtp(image,imageName,i);
+                }
+                logger.Error(e, "Error in ftp");
+                return null;
             }
         }
 
