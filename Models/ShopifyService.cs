@@ -56,8 +56,7 @@ namespace ShopifyConsole.Models
                         using (var context = new Models.AppContext(kellyConnStr))
                         {
                             logger.Info("Deleting table Product");
-                            context.Product.RemoveRange(context.Product);
-                            context.SaveChanges();
+                            context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE Product");
                             logger.Info("Delete Successfully");
                             //context.Database.ExecuteSqlCommand("TRUNCATE TABLE dbo.Product");
                             foreach (ProductShopify product in mp.products)
@@ -506,7 +505,7 @@ namespace ShopifyConsole.Models
                             }
                         }                            
                         else
-                            logger.Error("Error uploading product to shopify: " + response.ErrorMessage);
+                            logger.Error("Error uploading product to shopify: " + response.Content);
                     }
                     else
                     {
@@ -526,7 +525,7 @@ namespace ShopifyConsole.Models
                             }
                         }
                         else
-                            logger.Error("Error uploading product to shopify: " + response.ErrorMessage);
+                            logger.Error("Error uploading product to shopify: " + response.Content);
                     }
                 }
             }
