@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NLog;
 using RestSharp;
 using RestSharp.Authenticators;
@@ -46,31 +47,56 @@ namespace ShopifyConsole.Models
         {
             try
             {
-                IRestResponse response = CallShopify("products.json", Method.GET, null);
-
+                IRestResponse response = CallShopify("products/count.json", Method.GET, null);
+                int pages = 0;
                 if (response.StatusCode.ToString().Equals("OK"))
                 {
-                    MasterProduct mp = JsonConvert.DeserializeObject<MasterProduct>(response.Content);
-                    if (mp != null)
+                    JObject res = JObject.Parse(response.Content);
+                    pages = (int)res["count"];
+                }
+
+                int totalPages = (pages / 250) + ((pages % 250) > 0 ? 1 : 0);
+                string pageInfo = "";
+
+                for(int i = 0;i < totalPages;i++)
+                {
+                    response = CallShopify($"products.json?limit=250&page_info={pageInfo}", Method.GET, null);
+
+                    if (response.StatusCode.ToString().Equals("OK"))
                     {
-                        using (var context = new Models.AppContext(kellyConnStr))
+                        string header = response.Headers[17].Value.ToString();
+                        
+                        foreach(string content in header.Split(","))
                         {
-                            logger.Info("Deleting table Product");
-                            context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE Product");
-                            logger.Info("Delete Successfully");
-                            //context.Database.ExecuteSqlCommand("TRUNCATE TABLE dbo.Product");
-                            foreach (ProductShopify product in mp.products)
+                            if(content.Contains("next"))
                             {
-                                InsertProduct(product,context,false);
+                                pageInfo = content.Split(";")[0].TrimStart('<').TrimEnd('>').Split("page_info=")[1];
                             }
-                            context.SaveChanges();
+                        }
+
+                        MasterProduct mp = JsonConvert.DeserializeObject<MasterProduct>(response.Content);
+                        if (mp != null)
+                        {
+                            using (var context = new Models.AppContext(kellyConnStr))
+                            {
+                                logger.Info("Deleting table Product");
+                                context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE Product");
+                                context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE ProductImage");
+                                logger.Info("Delete Successfully");
+                                //context.Database.ExecuteSqlCommand("TRUNCATE TABLE dbo.Product");
+                                foreach (ProductShopify product in mp.products)
+                                {
+                                    InsertProduct(product, context, false);
+                                }
+                                context.SaveChanges();
+                            }
                         }
                     }
-                }
-                else
-                {
-                    logger.Error("Error getting products: " + response.ErrorMessage);
-                }
+                    else
+                    {
+                        logger.Error("Error getting products: " + response.ErrorMessage);
+                    }
+                }                
             }
             catch(Exception e)
             {
@@ -83,7 +109,7 @@ namespace ShopifyConsole.Models
         {
             try
             {
-                logger.Info("Inserting Product " + product.title);                
+                logger.Info("Inserting Product " + product.title);
 
                 Product p = new Product();
                 p.Id = product.id;
@@ -112,9 +138,9 @@ namespace ShopifyConsole.Models
                     logger.Error("Error updating stock: " + response.ErrorMessage);
 
                 if (inserted)
-                    context.Update(p);
+                    context.Product.Update(p);
                 else
-                    context.Add(p);
+                    context.Product.Add(p);
 
                 foreach (Variant variant in product.variants)
                 {
@@ -131,10 +157,12 @@ namespace ShopifyConsole.Models
                     child.UpdateDate = variant.updated_at;
 
                     if (inserted)
-                        context.Update(child);
+                        context.Product.Update(child);
                     else
-                        context.Add(child);
+                        context.Product.Add(child);
                 }
+
+                context.SaveChanges();
                 logger.Info("Product inserted");
             }
             catch (Exception e)
@@ -391,13 +419,13 @@ namespace ShopifyConsole.Models
                     else
                         ps.product_type = parent.SegmentoNivel4;
                     ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
-                    ps.tags = $"{ps.product_type},{parent.SegmentoNivel2},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{parent.SegmentoNivel2},{sex},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca}";
+                    ps.tags = $"{ps.product_type},{parent.SegmentoNivel2},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex != parent.SegmentoNivel2 ? "kids," + sex : sex)},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}";
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{col}-{mar}";
                     ps.id = parent.Id;
                     if(parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")
                     {
                         ps.title = $"{parent.SegmentoNivel4} {col} {cp}";
-                        ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} {parent.SegmentoNivel4} {cp} {mat} {col} {mar}";
+                        ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel4} {cp} {mat} {col} {mar}";
                         ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {cp} {mat} | {col} | {mar}";
                         imageName = $"{parent.SegmentoNivel4}_{cp}_{mat}_{col}_{mar}";
                     }
@@ -406,14 +434,14 @@ namespace ShopifyConsole.Models
                         if (parent.SegmentoNivel5 == "Stiletto")
                         {
                             ps.title = $"Stilettos {col} {cp}";
-                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} Stilettos {cp} {mat} {col} {mar}";
+                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} Stilettos {cp} {mat} {col} {mar}";
                             ps.metafields_global_title_tag = $"Stilettos {cp} {mat} | {col} | {mar}";
                             imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
                         }
                         else
                         {
                             ps.title = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {col} {cp}";
-                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {parent.SegmentoNivel2} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
+                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
                             ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
                             imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
                         }                            
@@ -421,11 +449,14 @@ namespace ShopifyConsole.Models
 
                     ps.metafields_global_description_tag = ps.metafields_global_description_tag.Trim();
                     List<KellyChild> lsChild = new List<KellyChild>();
-                    List<ProductImage> lstImage = new List<ProductImage>();
+                    List<ProductTempImage> lstImage = new List<ProductTempImage>();
+                    List<ProductImage> lstUpload = new List<ProductImage>();
                     using (var context = new Models.AppContext(kellyConnStr))
                     {
                         lsChild = context.KellyChild.FromSqlInterpolated($"GetProductChildInfo {parent.CodigoPadre}").ToList();
-                        lstImage = context.ProductImage.Where(i => i.name.Contains(parent.CodigoPadre)).OrderBy(i => i.name).ToList();
+                        lstUpload = context.ProductImage.Where(i => i.product_id == parent.Id).ToList();
+                        if(lstUpload.Count == 0 && parent.Id == null)
+                            lstImage = context.ProductTempImage.Where(i => i.sku == parent.CodigoPadre).OrderBy(i => i.name).ToList();
                     }
 
                     string talla = String.Join(",", lsChild.Select(r => r.Talla).ToArray());
@@ -436,7 +467,7 @@ namespace ShopifyConsole.Models
                     if(lstImage.Count > 0)
                     {
                         int i = 1;
-                        foreach(ProductImage image in lstImage)
+                        foreach(ProductTempImage image in lstImage)
                         {
                             imageShopifies.Add(getImageFromFtp(image,imageName,i));
                             i++;
@@ -498,8 +529,7 @@ namespace ShopifyConsole.Models
                                 logger.Info("Uploading product: " + parent.CodigoPadre);
                                 using (var context = new Models.AppContext(kellyConnStr))
                                 {
-                                    InsertProduct(mp.product, context, true);
-                                    context.SaveChanges();
+                                    InsertProduct(mp.product, context, true);                                    
                                 }
                                 logger.Info("Product uploaded");
                             }
@@ -536,11 +566,11 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public ImageShopify getImageFromFtp(ProductImage image,string imageName,int i)
+        public ImageShopify getImageFromFtp(ProductTempImage image,string imageName,int i)
         {
             try
             {
-                FtpWebRequest request = (FtpWebRequest)WebRequest.Create(remotePath + "/" + image.name);
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create($"{remotePath}/{image.name}{image.extension}");
                 request.Method = WebRequestMethods.Ftp.DownloadFile;
                 request.Credentials = new NetworkCredential(smtpUser, smtpPass);
                 FtpWebResponse response = (FtpWebResponse)request.GetResponse();
@@ -558,6 +588,7 @@ namespace ShopifyConsole.Models
                 ImageShopify imgS = new ImageShopify();
                 imgS.attachment = img;
                 imgS.filename = $"{imageName.ToUpper()}_{i}.jpg";
+                imgS.alt = $"{imageName.ToUpper()}_{i}.jpg";
 
                 return imgS;
             }
@@ -616,16 +647,22 @@ namespace ShopifyConsole.Models
 
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE ProductImage");
+                    context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE ProductTempImage");
                     string line = reader.ReadLine();
                     while (!string.IsNullOrEmpty(line))
                     {
                         if (line.Contains(".jpg") || line.Contains(".png"))
                         {
+                            FileInfo fileInfo = new FileInfo(line);
                             logger.Info($"Getting image: {line}");
-                            ProductImage img = new ProductImage();
-                            img.name = line;
-                            context.ProductImage.Add(img);
+                            ProductTempImage img = new ProductTempImage();
+                            img.name = Path.GetFileNameWithoutExtension(fileInfo.Name);
+                            if (img.name.IndexOf('-') > 0)
+                                img.sku = img.name.Substring(0, img.name.IndexOf('-'));
+                            else
+                                img.sku = img.name;
+                            img.extension = fileInfo.Extension;
+                            context.ProductTempImage.Add(img);
                         }
                         line = reader.ReadLine();
                     }

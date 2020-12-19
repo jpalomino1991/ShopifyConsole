@@ -13,6 +13,7 @@ namespace ShopifyConsole.Models
         public DbSet<Web> Web { get; set; }
         public DbSet<Product> Product { get; set; }
         public DbSet<ProductImage> ProductImage { get; set; }
+        public DbSet<ProductTempImage> ProductTempImage { get; set; }
         public virtual DbSet<Stock> Stock { get; set; }
         public virtual DbSet<Price> Price { get; set; }
         public virtual DbSet<ProductKelly> ProductKelly { get; set; }
