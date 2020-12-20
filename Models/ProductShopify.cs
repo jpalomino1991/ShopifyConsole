@@ -21,5 +21,10 @@ namespace ShopifyConsole.Models
         public List<Variant> variants { get; set; }
         public List<Option> options { get; set; }
         public List<ImageShopify> images { get; set; }
+
+        public bool ShouldSerializeimages()
+        {
+            return (images.Count > 0);
+        }
     }
 }

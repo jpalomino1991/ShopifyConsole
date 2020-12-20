@@ -47,6 +47,13 @@ namespace ShopifyConsole.Models
         {
             try
             {
+                logger.Info("Deleting table Product");
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE Product");
+                    context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE ProductImage");
+                }
+                logger.Info("Delete Successfully");
                 IRestResponse response = CallShopify("products/count.json", Method.GET, null);
                 int pages = 0;
                 if (response.StatusCode.ToString().Equals("OK"))
@@ -79,11 +86,6 @@ namespace ShopifyConsole.Models
                         {
                             using (var context = new Models.AppContext(kellyConnStr))
                             {
-                                logger.Info("Deleting table Product");
-                                context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE Product");
-                                context.Database.ExecuteSqlInterpolated($"TRUNCATE TABLE ProductImage");
-                                logger.Info("Delete Successfully");
-                                //context.Database.ExecuteSqlCommand("TRUNCATE TABLE dbo.Product");
                                 foreach (ProductShopify product in mp.products)
                                 {
                                     InsertProduct(product, context, false);
@@ -160,6 +162,20 @@ namespace ShopifyConsole.Models
                         context.Product.Update(child);
                     else
                         context.Product.Add(child);
+                }
+
+                foreach(ImageShopify img in product.images)
+                {
+                    ProductImage pi = new ProductImage();
+                    pi.id = img.id;
+                    pi.product_id = product.id;
+                    pi.src = img.src;
+                    pi.alt = img.alt;
+
+                    if (inserted)
+                        context.ProductImage.Update(pi);
+                    else
+                        context.ProductImage.Add(pi);
                 }
 
                 context.SaveChanges();
@@ -419,8 +435,8 @@ namespace ShopifyConsole.Models
                     else
                         ps.product_type = parent.SegmentoNivel4;
                     ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
-                    ps.tags = $"{ps.product_type},{parent.SegmentoNivel2},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex != parent.SegmentoNivel2 ? "kids," + sex : sex)},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}";
-                    ps.handle = $"{cp}-{parent.SegmentoNivel4}-{parent.SegmentoNivel2}-{col}-{mar}";
+                    ps.tags = $"{ps.product_type},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex != parent.SegmentoNivel2 ? "Kids," + sex : sex)},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}";
+                    ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
                     if(parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")
                     {
@@ -455,7 +471,7 @@ namespace ShopifyConsole.Models
                     {
                         lsChild = context.KellyChild.FromSqlInterpolated($"GetProductChildInfo {parent.CodigoPadre}").ToList();
                         lstUpload = context.ProductImage.Where(i => i.product_id == parent.Id).ToList();
-                        if(lstUpload.Count == 0 && parent.Id == null)
+                        if(lstUpload.Count == 0)
                             lstImage = context.ProductTempImage.Where(i => i.sku == parent.CodigoPadre).OrderBy(i => i.name).ToList();
                     }
 
@@ -501,13 +517,13 @@ namespace ShopifyConsole.Models
                         variant.inventory_quantity = child.StockTotal <= 0 ? 0 : child.StockTotal;
                         variant.inventory_management = "shopify";
                         variant.compare_at_price = promoPrice == "" ? promoPrice : child.PrecioTV.ToString();
-                        stock += child.StockTotal;
+                        stock += child.StockTotal < 0 ? 0 : child.StockTotal;
                         lsVariant.Add(variant);
                     }
 
                     if (lsVariant.Count == 0) continue;
 
-                    if (stock <= 0 || lstImage.Count == 0)
+                    if (stock <= 0 || (lstImage.Count == 0 && lstUpload.Count == 0))
                         ps.status = "draft";
                     else
                         ps.status = "active";
