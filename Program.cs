@@ -13,7 +13,7 @@ namespace ShopifyConsole
             Logger logger = LogManager.GetCurrentClassLogger();
             try
             {
-                JObject o1 = JObject.Parse(File.ReadAllText("./appSettings.json"));
+                JObject o1 = JObject.Parse(File.ReadAllText($"{AppDomain.CurrentDomain.BaseDirectory}/appSettings.json"));
                 string kellyConnString = o1.First.First.ToString();
 
                 ShopifyService Sservice = new ShopifyService(kellyConnString, logger);
