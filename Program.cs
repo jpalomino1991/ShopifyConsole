@@ -55,6 +55,8 @@ namespace ShopifyConsole
                         break;
                     case "/ALL":
                         logger.Info("Updating product information at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+                        Sservice.getProductImage();
+                        Sservice.GetProducts();
                         Sservice.UploadProduct(result,true);
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;

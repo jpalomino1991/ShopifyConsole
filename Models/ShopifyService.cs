@@ -444,7 +444,7 @@ namespace ShopifyConsole.Models
                     else
                         ps.product_type = parent.SegmentoNivel4;
                     ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
-                    ps.tags = $"{ps.product_type},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex != parent.SegmentoNivel2 ? "Kids," + sex : sex)},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}";
+                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{ps.product_type},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex != parent.SegmentoNivel2 ? "Kids," + sex : sex)},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
                     if(parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")
