@@ -28,6 +28,7 @@ namespace ShopifyConsole.Models
         public DbSet<Payment> Payment { get; set; }
         public DbSet<Brand> Brand { get; set; }
         public DbSet<ProductType> ProductType { get; set; }
+        public virtual DbSet<Sku> Sku { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -61,6 +62,11 @@ namespace ShopifyConsole.Models
                 {
                     eb.HasNoKey();
                     eb.ToTable("Filter");
+                })
+                .Entity<Sku>(eb =>
+                {
+                    eb.HasNoKey();
+                    eb.ToTable("Sku");
                 });
         }
     }

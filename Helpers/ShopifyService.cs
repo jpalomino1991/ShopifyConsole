@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace ShopifyConsole.Models
 {
@@ -655,7 +656,7 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public void getProductImage()
+        public void GetProductImage()
         {
             try
             {
@@ -705,7 +706,7 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public void getProductFilter()
+        public void GetProductFilter()
         {
             try
             {
@@ -743,6 +744,43 @@ namespace ShopifyConsole.Models
             catch (Exception e)
             {
                 logger.Error(e, "Error getting products");
+                return;
+            }
+        }
+
+        public void DeleteDuplicate()
+        {
+            try
+            {
+                List<Sku> lstDup = new List<Sku>();
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    lstDup = context.Sku.FromSqlInterpolated($"GetDuplicateProduct").ToList();
+
+                    foreach (Sku sku in lstDup)
+                    {
+                        char[] numbers = new char[] { '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+                        List<Product> lstProd = context.Product.Where(p => p.SKU.Equals(sku.sku)).ToList();
+                        foreach(Product product in lstProd)
+                        {
+                            if(Regex.IsMatch(product.Handle.Substring(product.Handle.Length - 1),@"\d+"))
+                            {
+                                context.Database.ExecuteSqlInterpolated($"DeleteProduct {product.Id}");
+                                IRestResponse response = CallShopify($"products/{product.Id}.json", Method.DELETE, null);
+                                if (response.StatusCode.ToString().Equals("OK"))
+                                {
+                                    logger.Info($"Product {sku.sku} deleted successfully");
+                                }
+                                else
+                                    logger.Error("Error deleting product: " + response.Content);
+                            }                            
+                        }
+                    }
+                }                
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error on delete product process");
                 return;
             }
         }

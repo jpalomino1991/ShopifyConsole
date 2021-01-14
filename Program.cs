@@ -55,19 +55,24 @@ namespace ShopifyConsole
                         break;
                     case "/ALL":
                         logger.Info("Updating product information at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
-                        Sservice.getProductImage();
-                        Sservice.GetProducts();
+                        //Sservice.GetProductImage();
+                        //Sservice.GetProducts();
                         Sservice.UploadProduct(result,true);
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/IMAGE":
                         logger.Info("Getting product image at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
-                        Sservice.getProductImage();
+                        Sservice.GetProductImage();
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/PF":
                         logger.Info("Getting product filters at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
-                        Sservice.getProductFilter();
+                        Sservice.GetProductFilter();
+                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+                        break;
+                    case "/DELETE":
+                        logger.Info("Deleting products at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+                        Sservice.DeleteDuplicate();
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                 }
