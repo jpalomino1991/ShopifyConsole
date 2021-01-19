@@ -91,7 +91,6 @@ namespace ShopifyConsole.Models
                                 {
                                     InsertProduct(product, context, false);
                                 }
-                                context.SaveChanges();
                             }
                         }
                     }
@@ -210,7 +209,13 @@ namespace ShopifyConsole.Models
                             inventory_item_id = stock.InventoryItemId,
                             available = stock.StockTotal
                         };
-                        ProcessCall("inventory_levels/set.json", Method.POST, JProduct);
+                        IRestResponse response = CallShopify("inventory_levels/set.json", Method.POST, JProduct);
+                        if (response.StatusCode.ToString().Equals("OK"))
+                            logger.Info("Product stock updated");
+                        else
+                        {
+                            logger.Error("Error updating stock: " + response.ErrorMessage);
+                        }
                     }
                 }
             }
@@ -246,7 +251,13 @@ namespace ShopifyConsole.Models
                                 compare_at_price = compare_price == "" ? compare_price : product.PrecioTV.ToString()
                             }
                         };
-                        ProcessCall("variants/" + product.Id + ".json", Method.PUT, JProduct);
+                        IRestResponse response = CallShopify("variants/" + product.Id + ".json", Method.PUT, JProduct);
+                        if (response.StatusCode.ToString().Equals("OK"))
+                            logger.Info("Product price updated");
+                        else
+                        {
+                            logger.Error("Error updating price: " + response.ErrorMessage);
+                        }
                     }
                 }
             }
@@ -254,23 +265,6 @@ namespace ShopifyConsole.Models
             {
                 logger.Error(e, "Error updating price");
                 return;
-            }
-        }
-
-        public void ProcessCall(string resource, RestSharp.Method method, dynamic parameters)
-        {
-            IRestResponse response = CallShopify(resource,method,parameters);
-            if (response.StatusCode.ToString().Equals("OK"))
-                logger.Info("Product updated");
-            else
-            {
-                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                {
-                    System.Threading.Thread.Sleep(5000);
-                    ProcessCall(resource,method,parameters);
-                }
-                else
-                    logger.Error("Error updating : " + response.ErrorMessage);
             }
         }
 
@@ -647,6 +641,13 @@ namespace ShopifyConsole.Models
                 }
 
                 IRestResponse response = rest.Execute(request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    System.Threading.Thread.Sleep(5000);
+                    return CallShopify(resource,method,parameters);
+                }
+
                 return response;
             }
             catch(Exception e)
