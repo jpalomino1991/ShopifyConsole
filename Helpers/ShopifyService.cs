@@ -642,7 +642,7 @@ namespace ShopifyConsole.Models
 
                 IRestResponse response = rest.Execute(request);
 
-                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests || response.StatusCode.ToString().Equals("520"))
                 {
                     System.Threading.Thread.Sleep(5000);
                     return CallShopify(resource,method,parameters);
@@ -778,6 +778,36 @@ namespace ShopifyConsole.Models
                         }
                     }
                 }                
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error on delete product process");
+                return;
+            }
+        }
+
+        public void DeleteMissing()
+        {
+            try
+            {
+                List<Sku> lstDup = new List<Sku>();
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    lstDup = context.Sku.FromSqlInterpolated($"GetMissingProduct").ToList();
+
+                    foreach (Sku sku in lstDup)
+                    {
+                        Product product = context.Product.Where(p => p.SKU == sku.sku).FirstOrDefault();
+                        context.Database.ExecuteSqlInterpolated($"DeleteProduct {product.Id}");
+                        IRestResponse response = CallShopify($"products/{product.Id}.json", Method.DELETE, null);
+                        if (response.StatusCode.ToString().Equals("OK"))
+                        {
+                            logger.Info($"Product {sku.sku} deleted successfully");
+                        }
+                        else
+                            logger.Error("Error deleting product: " + response.Content);
+                    }
+                }
             }
             catch (Exception e)
             {

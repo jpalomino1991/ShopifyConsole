@@ -75,6 +75,11 @@ namespace ShopifyConsole
                         Sservice.DeleteDuplicate();
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
+                    case "/MISSING":
+                        logger.Info("Deleting products at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+                        Sservice.DeleteMissing();
+                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+                        break;
                 }
             }
             catch (Exception ex)
