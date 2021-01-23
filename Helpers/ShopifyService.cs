@@ -46,6 +46,10 @@ namespace ShopifyConsole.Models
         }
         public void GetProducts()
         {
+            Guid guid = Guid.NewGuid();
+            DateTime start = DateTime.Now;
+            bool status = true;
+            int products = 0;
             try
             {
                 logger.Info("Deleting table Product");
@@ -89,6 +93,7 @@ namespace ShopifyConsole.Models
                             {
                                 foreach (ProductShopify product in mp.products)
                                 {
+                                    products++;
                                     InsertProduct(product, context, false);
                                 }
                             }
@@ -96,12 +101,19 @@ namespace ShopifyConsole.Models
                     }
                     else
                     {
+                        status = false;
+                        RegisterLogError(response.Content, guid);
                         logger.Error("Error getting products: " + response.ErrorMessage);
                     }
-                }                
+                }
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Obtener Productos de Shopify", $"Se ha bajado {products} productos", status);
             }
             catch(Exception e)
             {
+                RegisterLogError(e.Message, guid);
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Obtener Productos de Shopify", $"Se ha bajado {products} productos", false);
                 logger.Error(e, "Error getting products");
                 return;
             }            
@@ -111,7 +123,7 @@ namespace ShopifyConsole.Models
         {
             try
             {
-                logger.Info("Inserting Product " + product.title);
+                logger.Info("Inserting Product " + product.title);                
 
                 Product p = new Product();
                 p.Id = product.id;
@@ -124,7 +136,7 @@ namespace ShopifyConsole.Models
                 p.SKU = product.variants[0].sku.Substring(0, product.variants[0].sku.LastIndexOf("."));
                 p.Status = product.status;
                 p.CreateDate = product.created_at;
-                p.UpdateDate = product.updated_at;
+                p.UpdateDate = product.updated_at;                
 
                 IRestResponse response = CallShopify($"products/{product.id}/metafields.json", Method.GET, null);
                 if (response.StatusCode.ToString().Equals("OK"))
@@ -137,12 +149,12 @@ namespace ShopifyConsole.Models
                     }
                 }
                 else
-                    logger.Error("Error updating stock: " + response.ErrorMessage);
+                    logger.Error("Error updating product: " + response.ErrorMessage);
 
                 if (inserted)
                     context.Product.Update(p);
                 else
-                    context.Product.Add(p);
+                    context.Product.Add(p);                
 
                 foreach (Variant variant in product.variants)
                 {
@@ -183,16 +195,18 @@ namespace ShopifyConsole.Models
             }
             catch (Exception e)
             {
-                logger.Error(e, "Error inserting product " + product.id);
-                return;
+                throw e;
             }            
         }
 
         public void UpdateStock(int days)
         {
+            Guid guid = Guid.NewGuid();
+            DateTime start = DateTime.Now;
+            bool status = true;
+            List<Stock> lsStock = new List<Stock>();
             try
             {
-                List<Stock> lsStock = new List<Stock>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
                     lsStock = context.Stock.FromSqlInterpolated($"GetStockForShopify {DateTime.Now.AddDays(days * -1).ToString("yyyy/MM/dd")}").ToList();
@@ -214,13 +228,20 @@ namespace ShopifyConsole.Models
                             logger.Info("Product stock updated");
                         else
                         {
+                            status = false;
+                            RegisterLogError(response.Content, guid);
                             logger.Error("Error updating stock: " + response.ErrorMessage);
                         }
                     }
                 }
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Actualizar Stock", $"Se han actualizado {lsStock.Count} productos", status);
             }
             catch(Exception e)
             {
+                RegisterLogError(e.Message, guid);
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Actualizar Stock", $"Se han actualizado {lsStock.Count} productos", false);
                 logger.Error(e, "Error updating stock");
                 return;
             }
@@ -228,9 +249,12 @@ namespace ShopifyConsole.Models
 
         public void UpdatePrice(int days)
         {
+            Guid guid = Guid.NewGuid();
+            DateTime start = DateTime.Now;
+            bool status = true;
+            List<Price> lsPrice = new List<Price>();
             try
-            {
-                List<Price> lsPrice = new List<Price>();
+            {                                
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
                     lsPrice = context.Price.FromSqlInterpolated($"GetPriceForShopify {DateTime.Now.AddDays(days * -1).ToString("yyyy/MM/dd")}").ToList();
@@ -256,13 +280,20 @@ namespace ShopifyConsole.Models
                             logger.Info("Product price updated");
                         else
                         {
+                            status = false;
+                            RegisterLogError(response.Content, guid);
                             logger.Error("Error updating price: " + response.ErrorMessage);
                         }
                     }
                 }
+                DateTime end = DateTime.Now;
+                RegisterLog(start,end,guid,"Actualizar Precio",$"Se han actualizado {lsPrice.Count} productos",status);
             }
             catch (Exception e)
             {
+                RegisterLogError(e.Message, guid);
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Actualizar Precio", $"Se han actualizado {lsPrice.Count} productos", false);
                 logger.Error(e, "Error updating price");
                 return;
             }
@@ -291,21 +322,26 @@ namespace ShopifyConsole.Models
 
         public void GetOrders(int days)
         {
+            Guid guid = Guid.NewGuid();
+            DateTime start = DateTime.Now;
+            bool status = true;
+            int orderNumber = 0;
             try
             {
                 IRestResponse response = CallShopify("orders.json?fulfillment_status=unfulfilled&created_at_min=" + DateTime.Now.AddDays(days * -1).ToString("yyyy-MM-dd") + "&since_id=0", Method.GET, null);
-                if(response.StatusCode.ToString().Equals("OK"))
+                if (response.StatusCode.ToString().Equals("OK"))
                 {
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
-                    if(SO.orders != null)
+                    if (SO.orders != null)
                     {
                         foreach (Order order in SO.orders)
                         {
                             using (var context = new Models.AppContext(kellyConnStr))
                             {
                                 Order so = context.Orders.Find(order.id);
-                                if(so == null)
+                                if (so == null)
                                 {
+                                    orderNumber++;
                                     logger.Info("Downloading order: " + order.id);
 
                                     Customer customer = context.Customer.Find(order.customer.id);
@@ -363,11 +399,11 @@ namespace ShopifyConsole.Models
                                     order.shipping_address.order_id = order.id;
 
                                     context.BillAddress.Add(order.billing_address);
-                                    context.ShipAddress.Add(order.shipping_address);                                    
+                                    context.ShipAddress.Add(order.shipping_address);
 
                                     CustomerAddress customerAddress = context.CustomerAddress.Find(order.customer.default_address.id);
 
-                                    if(customerAddress == null)
+                                    if (customerAddress == null)
                                         context.CustomerAddress.Add(order.customer.default_address);
                                     else
                                         context.CustomerAddress.Update(customerAddress);
@@ -378,12 +414,22 @@ namespace ShopifyConsole.Models
                             }
                         }
                     }
+                    DateTime end = DateTime.Now;
+                    RegisterLog(start, end, guid, "Bajada de Ordenes", $"Se ha bajado {orderNumber} ordenes", status);
                 }
                 else
+                {
+                    RegisterLogError(response.Content, guid);
+                    DateTime end = DateTime.Now;
+                    RegisterLog(start, end, guid, "Bajada de Ordenes", $"Se ha bajado {orderNumber} ordenes", false);
                     logger.Error("Error downloading orders: " + response.ErrorMessage);
+                }
             }
             catch(Exception e)
             {
+                RegisterLogError(e.Message, guid);
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Bajada de Ordenes", $"Se ha bajado {orderNumber} ordenes", false);
                 logger.Error(e, "Error downloading orders");
                 return;
             }
@@ -391,6 +437,11 @@ namespace ShopifyConsole.Models
 
         public void UploadProduct(int days,bool all)
         {
+            Guid guid = Guid.NewGuid();
+            DateTime start = DateTime.Now;
+            bool status = true;
+            int newProd = 0;
+            int prods = 0;
             try
             {
                 List<ProductKelly> lsParent = new List<ProductKelly>();
@@ -540,6 +591,7 @@ namespace ShopifyConsole.Models
 
                     if(parent.Id != null)
                     {
+                        prods++;
                         IRestResponse response = CallShopify("products/" + parent.Id + ".json", Method.PUT, oJson);
                         if (response.StatusCode.ToString().Equals("OK"))
                         {
@@ -549,21 +601,26 @@ namespace ShopifyConsole.Models
                                 logger.Info("Uploading product: " + parent.CodigoPadre);
                                 using (var context = new Models.AppContext(kellyConnStr))
                                 {
-                                    InsertProduct(mp.product, context, true);                                    
+                                    InsertProduct(mp.product, context, true);
                                 }
                                 logger.Info("Product uploaded");
                             }
-                        }                            
+                        }
                         else
+                        {
+                            status = false;
+                            RegisterLogError(response.Content, guid);
                             logger.Error("Error uploading product to shopify: " + response.Content);
+                        }
                     }
                     else
                     {
+                        newProd++;
                         IRestResponse response = CallShopify("products.json", Method.POST, oJson);
                         if (response.StatusCode.ToString().Equals("Created"))
                         {
                             MasterProduct mp = JsonConvert.DeserializeObject<MasterProduct>(response.Content);
-                            if(mp.product != null)
+                            if (mp.product != null)
                             {
                                 logger.Info("Uploading product: " + parent.CodigoPadre);
                                 using (var context = new Models.AppContext(kellyConnStr))
@@ -575,12 +632,21 @@ namespace ShopifyConsole.Models
                             }
                         }
                         else
+                        {
+                            status = false;
+                            RegisterLogError(response.Content, guid);
                             logger.Error("Error uploading product to shopify: " + response.Content);
+                        }
                     }
                 }
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Actualizar Productos", $"Se ha subido {newProd} nuevos productos y actualizado {prods} productos", status);
             }
             catch (Exception e)
             {
+                RegisterLogError(e.Message, guid);
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Actualizar Productos", $"Se ha subido {newProd} nuevos productos y actualizado {prods} productos", false);
                 logger.Error(e,"Error uploading product in general");
                 return;
             }
@@ -659,6 +725,9 @@ namespace ShopifyConsole.Models
 
         public void GetProductImage()
         {
+            Guid guid = Guid.NewGuid();
+            DateTime start = DateTime.Now;
+            int images = 0;
             try
             {
                 logger.Info("Connecting to smtp server");
@@ -680,6 +749,7 @@ namespace ShopifyConsole.Models
                     {
                         if (line.Contains(".jpg") || line.Contains(".png"))
                         {
+                            images++;
                             FileInfo fileInfo = new FileInfo(line);
                             logger.Info($"Getting image: {line}");
                             ProductTempImage img = new ProductTempImage();
@@ -699,9 +769,14 @@ namespace ShopifyConsole.Models
                 reader.Close();
                 responseStream.Close();
                 response.Close();
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Bajar imagenes de FTP", $"Se ha bajado {images} imágenes", true);
             }
             catch (Exception e)
             {
+                RegisterLogError(e.Message, guid);
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Bajar imagenes de FTP", $"Se ha bajado {images} imágenes", false);
                 logger.Error(e, "Error getting product image");
                 return;
             }
@@ -788,9 +863,12 @@ namespace ShopifyConsole.Models
 
         public void DeleteMissing()
         {
+            Guid guid = Guid.NewGuid();
+            DateTime start = DateTime.Now;
+            bool status = true;
+            List<Sku> lstDup = new List<Sku>();
             try
-            {
-                List<Sku> lstDup = new List<Sku>();
+            {                
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
                     lstDup = context.Sku.FromSqlInterpolated($"GetMissingProduct").ToList();
@@ -805,14 +883,53 @@ namespace ShopifyConsole.Models
                             logger.Info($"Product {sku.sku} deleted successfully");
                         }
                         else
+                        {
+                            status = false;
+                            RegisterLogError(response.Content, guid);
                             logger.Error("Error deleting product: " + response.Content);
+                        }
                     }
                 }
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Borrar productos deshabilitados", $"Se ha borrado {lstDup.Count} productos", status);
             }
             catch (Exception e)
             {
+                RegisterLogError(e.Message, guid);
+                DateTime end = DateTime.Now;
+                RegisterLog(start, end, guid, "Borrar productos deshabilitados", $"Se ha borrado {lstDup.Count} productos", false);
                 logger.Error(e, "Error on delete product process");
                 return;
+            }
+        }
+
+        public void RegisterLogError(string error,Guid guid)
+        {
+            using (var context = new Models.AppContext(kellyConnStr))
+            {
+                LogDetail detail = new LogDetail();
+                detail.Error = error;
+                detail.LogId = guid;
+                context.LogDetail.Add(detail);
+                context.SaveChanges();
+            }
+        }
+
+        public void RegisterLog(DateTime start,DateTime end,Guid guid,string processName,string detail,bool status)
+        {
+            using (var context = new Models.AppContext(kellyConnStr))
+            {
+                Logs log = new Logs();
+                log.DateStart = start;
+                log.DateEnd = end;
+                log.Name = processName;
+                log.Detail = detail;
+                if (status)
+                    log.Status = "Completado";
+                else
+                    log.Status = "Con errores";
+                context.Logs.Add(log);
+                context.SaveChanges();
             }
         }
     }

@@ -28,6 +28,8 @@ namespace ShopifyConsole.Models
         public DbSet<Payment> Payment { get; set; }
         public DbSet<Brand> Brand { get; set; }
         public DbSet<ProductType> ProductType { get; set; }
+        public DbSet<Logs> Logs { get; set; }
+        public DbSet<LogDetail> LogDetail { get; set; }
         public virtual DbSet<Sku> Sku { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

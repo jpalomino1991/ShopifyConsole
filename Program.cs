@@ -26,25 +26,19 @@ namespace ShopifyConsole
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/STOCK":
-                        logger.Info("Update Stock start at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         if (args.Length > 1)
                             result = int.Parse(args[1]);
                         Sservice.UpdateStock(result);
-                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/PRICE":
-                        logger.Info("Update Price start at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         if (args.Length > 1)
                             result = int.Parse(args[1]);
                         Sservice.UpdatePrice(result);
-                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/ORDER":
-                        logger.Info("Download order start at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         if (args.Length > 1)
                             result = int.Parse(args[1]);
                         Sservice.GetOrders(result);
-                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/UPLOAD":
                         logger.Info("Updating product information at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
@@ -54,16 +48,12 @@ namespace ShopifyConsole
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/ALL":
-                        logger.Info("Updating product information at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
-                        //Sservice.GetProductImage();
-                        //Sservice.GetProducts();
+                        Sservice.GetProductImage();
+                        Sservice.GetProducts();
                         Sservice.UploadProduct(result,true);
-                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/IMAGE":
-                        logger.Info("Getting product image at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         Sservice.GetProductImage();
-                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/PF":
                         logger.Info("Getting product filters at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
@@ -76,9 +66,7 @@ namespace ShopifyConsole
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/MISSING":
-                        logger.Info("Deleting products at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         Sservice.DeleteMissing();
-                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                 }
             }
