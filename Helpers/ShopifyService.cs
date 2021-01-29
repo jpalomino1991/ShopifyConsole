@@ -328,7 +328,7 @@ namespace ShopifyConsole.Models
             int orderNumber = 0;
             try
             {
-                IRestResponse response = CallShopify("orders.json?fulfillment_status=unfulfilled&created_at_min=" + DateTime.Now.AddDays(days * -1).ToString("yyyy-MM-dd") + "&since_id=0", Method.GET, null);
+                IRestResponse response = CallShopify($"orders.json?fulfillment_status=unfulfilled&created_at_min={DateTime.Now.AddDays(days * -1).ToString("yyyy-MM-dd")}&since_id=0", Method.GET, null);
                 if (response.StatusCode.ToString().Equals("OK"))
                 {
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
@@ -394,6 +394,25 @@ namespace ShopifyConsole.Models
                                         context.Item.Add(item);
                                     }
 
+                                    switch(order.financial_status)
+                                    {
+                                        case "pending":
+                                            order.status = "Recibimos su pedido";
+                                            context.OrderStatus.Add(createState(order.id, order.status));
+                                            break;
+                                        case "paid":
+                                            order.status = "Pago confirmado";
+                                            context.OrderStatus.Add(createState(order.id, "Recibimos su pedido"));
+                                            context.OrderStatus.Add(createState(order.id, order.status));
+                                            break;
+                                    }
+
+                                    if(!string.IsNullOrEmpty(order.cancel_reason))
+                                    {
+                                        order.status = "Cancelado";
+                                        context.OrderStatus.Add(createState(order.id,"Cancelado"));
+                                    }
+
                                     order.customer.default_address.customer_id = order.customer.id;
                                     order.billing_address.order_id = order.id;
                                     order.shipping_address.order_id = order.id;
@@ -433,6 +452,15 @@ namespace ShopifyConsole.Models
                 logger.Error(e, "Error downloading orders");
                 return;
             }
+        }
+
+        public OrderStatus createState(string orderId,string status)
+        {
+            OrderStatus stat = new OrderStatus();
+            stat.CreateDate = DateTime.Now;
+            stat.OrderId = orderId;
+            stat.Status = status;
+            return stat;
         }
 
         public void UploadProduct(int days,bool all)
@@ -490,7 +518,7 @@ namespace ShopifyConsole.Models
                     else
                         ps.product_type = parent.SegmentoNivel4;
                     ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
-                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{ps.product_type},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex != parent.SegmentoNivel2 ? "Kids," + sex : sex)},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
+                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{ps.product_type},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
                     if(parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")

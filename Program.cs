@@ -21,9 +21,7 @@ namespace ShopifyConsole
                 switch (args[0])
                 {
                     case "/GP":
-                        logger.Info("Getting products from shopify " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         Sservice.GetProducts();
-                        logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/STOCK":
                         if (args.Length > 1)

@@ -20,6 +20,7 @@ namespace ShopifyConsole.Models
         public virtual DbSet<KellyChild> KellyChild { get; set; }
         public virtual DbSet<Filter> Filter { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderStatus> OrderStatus { get; set; }
         public DbSet<Item> Item { get; set; }
         public DbSet<BillAddress> BillAddress { get; set; }
         public DbSet<ShipAddress> ShipAddress { get; set; }

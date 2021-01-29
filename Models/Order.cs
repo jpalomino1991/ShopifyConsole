@@ -23,6 +23,11 @@ namespace ShopifyConsole.Models
 		public string name { get; set; }
 		public string order_number { get; set; }
 		public string customer_id { get; set; }
+		public string fulfillment_status { get; set; }
+		public string status { get; set; }
+		public string fechaEstimada { get; set; }
+		[NotMapped]
+		public string cancel_reason { get; set; }
 		[NotMapped]
 		public ICollection<Item> line_items { get; set; }
 		[NotMapped]
