@@ -11,6 +11,7 @@ namespace ShopifyConsole.Models
         public string body_html { get; set; }        
         public string vendor { get; set; }
         public string product_type { get; set; }
+        public string published_scope { get; set; }
         public string handle { get; set; }
         public string tags { get; set; }
         public string status { get; set; }

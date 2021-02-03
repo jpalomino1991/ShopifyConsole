@@ -169,6 +169,7 @@ namespace ShopifyConsole.Models
                     child.Size = variant.option1;
                     child.CreateDate = variant.created_at;
                     child.UpdateDate = variant.updated_at;
+                    child.Peso = variant.grams;
 
                     if (inserted)
                         context.Product.Update(child);
@@ -521,6 +522,7 @@ namespace ShopifyConsole.Models
                     ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{ps.product_type},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
+                    ps.published_scope = "global";
                     if(parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")
                     {
                         ps.title = $"{parent.SegmentoNivel4} {col} {cp}";
@@ -600,6 +602,9 @@ namespace ShopifyConsole.Models
                         variant.inventory_quantity = child.StockTotal <= 0 ? 0 : child.StockTotal;
                         variant.inventory_management = "shopify";
                         variant.compare_at_price = promoPrice == "" ? promoPrice : child.PrecioTV.ToString();
+                        variant.grams = child.Peso;
+                        variant.weight = child.Peso.ToString();
+                        variant.weight_unit = "g";
                         stock += child.StockTotal < 0 ? 0 : child.StockTotal;
                         lsVariant.Add(variant);
                     }
@@ -952,6 +957,7 @@ namespace ShopifyConsole.Models
                 log.DateEnd = end;
                 log.Name = processName;
                 log.Detail = detail;
+                log.Id = guid;
                 if (status)
                     log.Status = "Completado";
                 else

@@ -9,6 +9,7 @@ namespace ShopifyConsole.Models
         public string CodigoPadre { get; set; }
         public string CodigoSistema { get; set; }
         public string Talla { get; set; }
+        public int Peso { get; set; }
         public decimal PrecioTV { get; set; }
         public string PermitePromocion { get; set; }
         public decimal Promocion { get; set; }

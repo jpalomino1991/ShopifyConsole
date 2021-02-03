@@ -26,5 +26,6 @@ namespace ShopifyConsole.Models
         public string Status { get; set; }
         public DateTime CreateDate { get; set; }
         public DateTime UpdateDate { get; set; }
+        public int Peso { get; set; }
     }
 }
