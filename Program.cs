@@ -46,8 +46,8 @@ namespace ShopifyConsole
                         logger.Info("Finished at " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
                         break;
                     case "/ALL":
-                        //Sservice.GetProductImage();
-                        //Sservice.GetProducts();
+                        Sservice.GetProductImage();
+                        Sservice.GetProducts();
                         Sservice.UploadProduct(result,true);
                         break;
                     case "/IMAGE":

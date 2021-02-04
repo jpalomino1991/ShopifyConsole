@@ -200,6 +200,26 @@ namespace ShopifyConsole.Models
             }            
         }
 
+        public void UpdateStockForOne(List<Variant> variants)
+        {
+            foreach (Variant variant in variants)
+            {
+                dynamic JProduct = new
+                {
+                    location_id = locationId,
+                    inventory_item_id = variant.inventory_item_id,
+                    available = variant.inventory_quantity
+                };
+                IRestResponse response = CallShopify("inventory_levels/set.json", Method.POST, JProduct);
+                if (response.StatusCode.ToString().Equals("OK"))
+                    logger.Info("Product stock updated");
+                else
+                {
+                    logger.Error("Error updating stock: " + response.ErrorMessage);
+                }
+            }
+        }
+
         public void UpdateStock(int days)
         {
             Guid guid = Guid.NewGuid();
@@ -537,11 +557,11 @@ namespace ShopifyConsole.Models
                             ps.product_type = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5}";
                     }
                     if(parent.SegmentoNivel4 == "Accesorios")
-                        ps.product_type = $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}";
+                        ps.product_type = parent.SegmentoNivel5;
                     else
                         ps.product_type = parent.SegmentoNivel4;
                     ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
-                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{ps.product_type},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
+                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{(parent.SegmentoNivel4 == "Accesorios" ? $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}" : ps.product_type)},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
                     ps.published_scope = "global";
@@ -566,7 +586,7 @@ namespace ShopifyConsole.Models
                             ps.title = $"{parent.SegmentoNivel5} {col} {cp}";
                             ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
                             ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
-                            imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                            imageName = $"{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
                         }
                         else
                         {
@@ -670,6 +690,7 @@ namespace ShopifyConsole.Models
                                 using (var context = new Models.AppContext(kellyConnStr))
                                 {
                                     InsertProduct(mp.product, context, true);
+                                    UpdateStockForOne(mp.product.variants);
                                 }
                                 logger.Info("Product uploaded");
                             }
