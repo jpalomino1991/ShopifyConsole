@@ -26,6 +26,7 @@ namespace ShopifyConsole.Models
 		public string fulfillment_status { get; set; }
 		public string status { get; set; }
 		public string fechaEstimada { get; set; }
+		public string fulfillment_id { get; set; }
 		[NotMapped]
 		public string cancel_reason { get; set; }
 		[NotMapped]
@@ -34,6 +35,8 @@ namespace ShopifyConsole.Models
 		public BillAddress billing_address { get; set; }
 		[NotMapped]
 		public ShipAddress shipping_address { get; set; }
+		[NotMapped]
+		public List<ShippingLine> shipping_lines { get; set; }
 		[NotMapped]
 		//public Payment payment_details { get; set; }
 		public Customer customer { get; set; }

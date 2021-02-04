@@ -418,6 +418,20 @@ namespace ShopifyConsole.Models
                                     order.billing_address.order_id = order.id;
                                     order.shipping_address.order_id = order.id;
 
+                                    if(order.shipping_lines != null)
+                                    {
+                                        if(order.shipping_lines[0].code.Contains("Recojo en Tienda"))
+                                        {
+                                            order.fechaEstimada = "Se notificará para recojo: de 6 a 48 horas";
+                                        }
+                                        else
+                                        {
+                                            string city = order.shipping_lines[0].code.Split('-')[1].Split('(')[0].Trim();
+                                            ShippingTimes shippingTimes = context.ShippingTimes.Where(s => s.city.Contains(city)).FirstOrDefault();
+                                            order.fechaEstimada = calculateEstimateDate(shippingTimes);
+                                        }
+                                    }
+
                                     context.BillAddress.Add(order.billing_address);
                                     context.ShipAddress.Add(order.shipping_address);
 
@@ -453,6 +467,12 @@ namespace ShopifyConsole.Models
                 logger.Error(e, "Error downloading orders");
                 return;
             }
+        }
+
+        public string calculateEstimateDate(ShippingTimes shippingTimes)
+        {
+            DateTime date = DateTime.Now;
+            return $"Recibe entre el {date.AddDays(shippingTimes.beginDay).ToString("dd/MM/yyyy")} y el {date.AddDays(shippingTimes.endDay).ToString("dd/MM/yyyy")}"; ;
         }
 
         public OrderStatus createState(string orderId,string status)
@@ -516,10 +536,12 @@ namespace ShopifyConsole.Models
                         else
                             ps.product_type = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5}";
                     }
+                    if(parent.SegmentoNivel4 == "Accesorios")
+                        ps.product_type = $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}";
                     else
                         ps.product_type = parent.SegmentoNivel4;
                     ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
-                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{ps.product_type},{mat},{col},{cp},{mat.Replace(' ',',')},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
+                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{ps.product_type},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
                     ps.published_scope = "global";
@@ -539,13 +561,20 @@ namespace ShopifyConsole.Models
                             ps.metafields_global_title_tag = $"Stilettos {cp} {mat} | {col} | {mar}";
                             imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
                         }
+                        if(parent.SegmentoNivel4 == "Accesorios")
+                        {
+                            ps.title = $"{parent.SegmentoNivel5} {col} {cp}";
+                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
+                            ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
+                            imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                        }
                         else
                         {
                             ps.title = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {col} {cp}";
                             ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
                             ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
                             imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
-                        }                            
+                        }
                     }
 
                     ps.metafields_global_description_tag = ps.metafields_global_description_tag.Trim();
@@ -561,7 +590,10 @@ namespace ShopifyConsole.Models
                     }
 
                     string talla = String.Join(",", lsChild.Select(r => r.Talla).ToArray());
-                    ps.tags += "," + talla;
+                    if(parent.SegmentoNivel4 != "Accesorios")
+                        ps.tags += "," + talla;
+                    else
+                        ps.tags += ",Talla única";
 
                     List<ImageShopify> imageShopifies = new List<ImageShopify>();
 
@@ -598,7 +630,10 @@ namespace ShopifyConsole.Models
                         variant.id = child.Id;
                         variant.sku = child.CodigoSistema;
                         variant.price = promoPrice == "" ? child.PrecioTV : decimal.Parse(promoPrice);
-                        variant.option1 = child.Talla.ToString();
+                        if (parent.SegmentoNivel4 != "Accesorios")
+                            variant.option1 = child.Talla.ToString();
+                        else
+                            variant.option1 = "Talla única";
                         variant.inventory_quantity = child.StockTotal <= 0 ? 0 : child.StockTotal;
                         variant.inventory_management = "shopify";
                         variant.compare_at_price = promoPrice == "" ? promoPrice : child.PrecioTV.ToString();

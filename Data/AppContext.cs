@@ -24,6 +24,7 @@ namespace ShopifyConsole.Models
         public DbSet<Item> Item { get; set; }
         public DbSet<BillAddress> BillAddress { get; set; }
         public DbSet<ShipAddress> ShipAddress { get; set; }
+        public DbSet<ShippingTimes> ShippingTimes { get; set; }
         public DbSet<Customer> Customer { get; set; }
         public DbSet<CustomerAddress> CustomerAddress { get; set; }
         public DbSet<Payment> Payment { get; set; }
