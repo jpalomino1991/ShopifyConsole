@@ -38,6 +38,8 @@ namespace ShopifyConsole.Models
 		[NotMapped]
 		public List<ShippingLine> shipping_lines { get; set; }
 		[NotMapped]
+		public List<Fulfillment> fulfillments { get; set; }
+		[NotMapped]
 		//public Payment payment_details { get; set; }
 		public Customer customer { get; set; }
 	}

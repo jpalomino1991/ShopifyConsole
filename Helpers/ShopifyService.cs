@@ -6,6 +6,7 @@ using RestSharp;
 using RestSharp.Authenticators;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Globalization;
 using System.IO;
@@ -355,6 +356,8 @@ namespace ShopifyConsole.Models
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
                     if (SO.orders != null)
                     {
+                        /*SO.orders = new List<Order>();
+                        SO.orders.Add(SO.order);*/
                         foreach (Order order in SO.orders)
                         {
                             using (var context = new Models.AppContext(kellyConnStr))
@@ -414,16 +417,16 @@ namespace ShopifyConsole.Models
                                         item.tax_rate = tax_rate;
                                         context.Item.Add(item);
                                     }
-
+                                    
                                     switch(order.financial_status)
                                     {
                                         case "pending":
-                                            order.status = "Recibimos su pedido";
+                                            order.status = "Pedido recibido";
                                             context.OrderStatus.Add(createState(order.id, order.status));
                                             break;
                                         case "paid":
                                             order.status = "Pago confirmado";
-                                            context.OrderStatus.Add(createState(order.id, "Recibimos su pedido"));
+                                            context.OrderStatus.Add(createState(order.id, "Pedido recibido"));
                                             context.OrderStatus.Add(createState(order.id, order.status));
                                             break;
                                     }
@@ -434,26 +437,53 @@ namespace ShopifyConsole.Models
                                         context.OrderStatus.Add(createState(order.id,"Cancelado"));
                                     }
 
+                                    if(order.fulfillments.Count > 0)
+                                    {
+                                        order.fulfillment_id = order.fulfillments[0].id;
+                                    }
+
                                     order.customer.default_address.customer_id = order.customer.id;
                                     order.billing_address.order_id = order.id;
                                     order.shipping_address.order_id = order.id;
 
                                     if(order.shipping_lines != null)
                                     {
-                                        if(order.shipping_lines[0].code.Contains("Recojo en Tienda"))
+                                        if(order.shipping_lines[0].code.Contains("Envío Express"))
                                         {
-                                            order.fechaEstimada = "Se notificará para recojo: de 6 a 48 horas";
+                                            if (order.created_at.DayOfWeek == DayOfWeek.Saturday || order.created_at.DayOfWeek == DayOfWeek.Sunday || (order.created_at.Hour == 16 && order.created_at.Minute > 0) || order.created_at.Hour > 16)
+                                            {
+                                                DateTime date = AddBusinessDays(order.created_at,1);
+                                                order.fechaEstimada = $"Recibe el dia {date.ToString("dd/MM/yyyy")}";
+                                            }
+                                            else
+                                                order.fechaEstimada = $"Recibe el dia {order.created_at.ToString("dd/MM/yyyy")}";
                                         }
                                         else
                                         {
-                                            string city = order.shipping_lines[0].code.Split('-')[1].Split('(')[0].Trim();
-                                            ShippingTimes shippingTimes = context.ShippingTimes.Where(s => s.city.Contains(city)).FirstOrDefault();
-                                            order.fechaEstimada = calculateEstimateDate(shippingTimes);
+                                            if (order.shipping_lines[0].code.Contains("Recojo en Tienda"))
+                                            {
+                                                order.fechaEstimada = "Se notificará para recojo: de 6 a 48 horas";
+                                            }
+                                            else
+                                            {
+                                                if (order.shipping_lines[0].code.Split('-').Length > 1)
+                                                {
+                                                    string city = order.shipping_lines[0].code.Split('-')[1].Split('(')[0].Trim();
+                                                    ShippingTimes shippingTimes = context.ShippingTimes.Where(s => s.city.Contains(city)).FirstOrDefault();
+                                                    order.fechaEstimada = calculateEstimateDate(order.created_at,shippingTimes);
+                                                }
+                                            }
                                         }
                                     }
 
+                                    if (string.IsNullOrEmpty(order.billing_address.company))
+                                    {
+                                        order.billing_address.company = "sin dni";
+                                        order.shipping_address.company = "sin dni";
+                                    }                                        
+
                                     context.BillAddress.Add(order.billing_address);
-                                    context.ShipAddress.Add(order.shipping_address);
+                                    context.ShipAddress.Add(order.shipping_address);                                    
 
                                     CustomerAddress customerAddress = context.CustomerAddress.Find(order.customer.default_address.id);
 
@@ -489,10 +519,42 @@ namespace ShopifyConsole.Models
             }
         }
 
-        public string calculateEstimateDate(ShippingTimes shippingTimes)
+        public static DateTime AddBusinessDays(DateTime date, int days)
         {
-            DateTime date = DateTime.Now;
-            return $"Recibe entre el {date.AddDays(shippingTimes.beginDay).ToString("dd/MM/yyyy")} y el {date.AddDays(shippingTimes.endDay).ToString("dd/MM/yyyy")}"; ;
+            if (days < 0)
+            {
+                throw new ArgumentException("days cannot be negative", "days");
+            }
+
+            if (days == 0) return date;
+
+            if (date.DayOfWeek == DayOfWeek.Saturday)
+            {
+                date = date.AddDays(2);
+                days -= 1;
+            }
+            else if (date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                date = date.AddDays(1);
+                days -= 1;
+            }
+
+            date = date.AddDays(days / 5 * 7);
+            int extraDays = days % 5;
+
+            if ((int)date.DayOfWeek + extraDays > 5)
+            {
+                extraDays += 2;
+            }
+
+            return date.AddDays(extraDays);
+        }
+
+        public string calculateEstimateDate(DateTime date,ShippingTimes shippingTimes)
+        {
+            DateTime beginDate = AddBusinessDays(date, shippingTimes.beginDay);
+            DateTime endDate = AddBusinessDays(date, shippingTimes.endDay);
+            return $"Recibe entre el {beginDate.ToString("dd/MM/yyyy")} y el {endDate.ToString("dd/MM/yyyy")}"; ;
         }
 
         public OrderStatus createState(string orderId,string status)
@@ -560,7 +622,7 @@ namespace ShopifyConsole.Models
                         ps.product_type = parent.SegmentoNivel5;
                     else
                         ps.product_type = parent.SegmentoNivel4;
-                    ps.body_html = String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp);
+                    ps.body_html = String.IsNullOrEmpty(parent.Description) ? String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp) : parent.Description;
                     ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{(parent.SegmentoNivel4 == "Accesorios" ? $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}" : ps.product_type)},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;

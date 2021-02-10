@@ -22,5 +22,6 @@ namespace ShopifyConsole.Models
         public string Size { get; set; }
         public string SKU { get; set; }
         public int Stock { get; set; }
+        public string Taco { get; set; }
     }
 }
