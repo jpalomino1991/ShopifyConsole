@@ -137,7 +137,7 @@ namespace ShopifyConsole.Models
                 p.SKU = product.variants[0].sku.Substring(0, product.variants[0].sku.LastIndexOf("."));
                 p.Status = product.status;
                 p.CreateDate = product.created_at;
-                p.UpdateDate = product.updated_at;                
+                p.UpdateDate = DateTime.Now;
 
                 IRestResponse response = CallShopify($"products/{product.id}/metafields.json", Method.GET, null);
                 if (response.StatusCode.ToString().Equals("OK"))
@@ -169,7 +169,7 @@ namespace ShopifyConsole.Models
                     child.InventoryItemId = variant.inventory_item_id;
                     child.Size = variant.option1;
                     child.CreateDate = variant.created_at;
-                    child.UpdateDate = variant.updated_at;
+                    child.UpdateDate = DateTime.Now;
                     child.Peso = variant.grams;
 
                     if (inserted)
@@ -178,26 +178,26 @@ namespace ShopifyConsole.Models
                         context.Product.Add(child);
                 }
 
-                foreach(ImageShopify img in product.images)
+                if (!inserted)
                 {
-                    ProductImage pi = new ProductImage();
-                    pi.id = img.id;
-                    pi.product_id = product.id;
-                    pi.src = img.src;
-                    pi.alt = img.alt;
+                    foreach (ImageShopify img in product.images)
+                    {
+                        ProductImage pi = new ProductImage();
+                        pi.id = img.id;
+                        pi.product_id = product.id;
+                        pi.src = img.src;
+                        pi.alt = img.alt;
 
-                    if (inserted)
-                        context.ProductImage.Update(pi);
-                    else
                         context.ProductImage.Add(pi);
-                }
+                    }
+                }                
 
                 context.SaveChanges();
                 logger.Info("Product inserted");
             }
             catch (Exception e)
             {
-                throw e;
+               throw e;
             }            
         }
 
@@ -446,8 +446,9 @@ namespace ShopifyConsole.Models
                                     order.billing_address.order_id = order.id;
                                     order.shipping_address.order_id = order.id;
 
-                                    if(order.shipping_lines != null)
+                                    if(order.shipping_lines.Count > 0)
                                     {
+                                        order.shipping_price = order.shipping_lines[0].price;
                                         if(order.shipping_lines[0].code.Contains("Envío Express"))
                                         {
                                             if (order.created_at.DayOfWeek == DayOfWeek.Saturday || order.created_at.DayOfWeek == DayOfWeek.Sunday || (order.created_at.Hour == 16 && order.created_at.Minute > 0) || order.created_at.Hour > 16)
@@ -466,7 +467,7 @@ namespace ShopifyConsole.Models
                                             }
                                             else
                                             {
-                                                if (order.shipping_lines[0].code.Split('-').Length > 1)
+                                                if (order.shipping_lines[0].code.Contains('-'))
                                                 {
                                                     string city = order.shipping_lines[0].code.Split('-')[1].Split('(')[0].Trim();
                                                     ShippingTimes shippingTimes = context.ShippingTimes.Where(s => s.city.Contains(city)).FirstOrDefault();
@@ -480,7 +481,7 @@ namespace ShopifyConsole.Models
                                     {
                                         order.billing_address.company = "sin dni";
                                         order.shipping_address.company = "sin dni";
-                                    }                                        
+                                    }
 
                                     context.BillAddress.Add(order.billing_address);
                                     context.ShipAddress.Add(order.shipping_address);                                    
@@ -613,15 +614,21 @@ namespace ShopifyConsole.Models
                     {
                         if (parent.SegmentoNivel5 == "Stiletto")
                             ps.product_type = "Stilettos";
-                        if (parent.SegmentoNivel5 == "Fiesta" || parent.SegmentoNivel5 == "Vestir")
-                            ps.product_type = $"{parent.SegmentoNivel4} de {parent.SegmentoNivel5}";
                         else
-                            ps.product_type = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5}";
+                        {
+                            if (parent.SegmentoNivel5 == "Fiesta" || parent.SegmentoNivel5 == "Vestir")
+                                ps.product_type = $"{parent.SegmentoNivel4} de {parent.SegmentoNivel5}";
+                            else
+                                ps.product_type = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5}";
+                        }
                     }
-                    if(parent.SegmentoNivel4 == "Accesorios")
-                        ps.product_type = parent.SegmentoNivel5;
                     else
-                        ps.product_type = parent.SegmentoNivel4;
+                    { 
+                        if(parent.SegmentoNivel4 == "Accesorios")
+                            ps.product_type = parent.SegmentoNivel5;
+                        else
+                            ps.product_type = parent.SegmentoNivel4;
+                    }
                     ps.body_html = String.IsNullOrEmpty(parent.Description) ? String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp) : parent.Description;
                     ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{(parent.SegmentoNivel4 == "Accesorios" ? $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}" : ps.product_type)},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
@@ -643,19 +650,22 @@ namespace ShopifyConsole.Models
                             ps.metafields_global_title_tag = $"Stilettos {cp} {mat} | {col} | {mar}";
                             imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
                         }
-                        if(parent.SegmentoNivel4 == "Accesorios")
-                        {
-                            ps.title = $"{parent.SegmentoNivel5} {col} {cp}";
-                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
-                            ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
-                            imageName = $"{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
-                        }
                         else
                         {
-                            ps.title = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {col} {cp}";
-                            ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
-                            ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
-                            imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                            if (parent.SegmentoNivel4 == "Accesorios")
+                            {
+                                ps.title = $"{parent.SegmentoNivel5} {col} {cp}";
+                                ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
+                                ps.metafields_global_title_tag = $"{parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
+                                imageName = $"{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                            }
+                            else
+                            {
+                                ps.title = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {col} {cp}";
+                                ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
+                                ps.metafields_global_title_tag = $"{parent.SegmentoNivel4} {parent.SegmentoNivel5} {cp} {mat} | {col} | {mar}";
+                                imageName = $"{parent.SegmentoNivel4}_{parent.SegmentoNivel5}_{cp}_{mat}_{col}_{mar}";
+                            }
                         }
                     }
 

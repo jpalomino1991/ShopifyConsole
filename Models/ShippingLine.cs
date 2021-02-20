@@ -9,5 +9,6 @@ namespace ShopifyConsole.Models
         public string id { get; set; }
         public string code { get; set; }
         public string title { get; set; }
+        public decimal price { get; set; }
     }
 }
