@@ -350,14 +350,14 @@ namespace ShopifyConsole.Models
             int orderNumber = 0;
             try
             {
-                IRestResponse response = CallShopify($"orders.json?fulfillment_status=unfulfilled&created_at_min={DateTime.Now.AddDays(days * -1).ToString("yyyy-MM-dd")}&since_id=0", Method.GET, null);
+                IRestResponse response = CallShopify($"orders/3107676848285.json", Method.GET, null);
                 if (response.StatusCode.ToString().Equals("OK"))
                 {
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
-                    if (SO.orders != null)
+                    if (SO.order != null)
                     {
-                        /*SO.orders = new List<Order>();
-                        SO.orders.Add(SO.order);*/
+                        SO.orders = new List<Order>();
+                        SO.orders.Add(SO.order);
                         foreach (Order order in SO.orders)
                         {
                             using (var context = new Models.AppContext(kellyConnStr))
@@ -461,7 +461,7 @@ namespace ShopifyConsole.Models
                                         }
                                         else
                                         {
-                                            if (order.shipping_lines[0].code.Contains("Recojo en Tienda"))
+                                            if (order.shipping_lines[0].code.ToUpper().Contains("RECOJO EN TIENDA"))
                                             {
                                                 order.fechaEstimada = "Se notificará para recojo: de 6 a 48 horas";
                                             }
@@ -1059,6 +1059,37 @@ namespace ShopifyConsole.Models
                 RegisterLogError(e.Message, guid);
                 DateTime end = DateTime.Now;
                 RegisterLog(start, end, guid, "Borrar productos deshabilitados", $"Se ha borrado {lstDup.Count} productos", false);
+                logger.Error(e, "Error on delete product process");
+                return;
+            }
+        }
+
+        public void CreateWebhook()
+        {
+            try
+            {
+                dynamic JWebhook = new
+                {
+                    webhook = new
+                    {
+                        topic = "orders/updated",
+                        address = "https://shopifywebhookkelly.herokuapp.com/api/order/orderupdate",
+                        format = "json"
+                    }
+                };
+
+                IRestResponse response = CallShopify($"webhooks.json", Method.POST, JWebhook);
+                if (response.StatusCode.ToString().Equals("OK"))
+                {
+                    logger.Info($"Webhook created");
+                }
+                else
+                {
+                    logger.Error("Error creating webhook: " + response.Content);
+                }
+            }
+            catch (Exception e)
+            {
                 logger.Error(e, "Error on delete product process");
                 return;
             }

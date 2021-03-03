@@ -66,6 +66,9 @@ namespace ShopifyConsole
                     case "/MISSING":
                         Sservice.DeleteMissing();
                         break;
+                    case "/WEBHOOK":
+                        Sservice.CreateWebhook();
+                        break;
                 }
             }
             catch (Exception ex)
