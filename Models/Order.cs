@@ -28,6 +28,7 @@ namespace ShopifyConsole.Models
 		public string fechaEstimada { get; set; }
 		public string fulfillment_id { get; set; }
 		public decimal shipping_price { get; set; }
+		public string tipoEnvio { get; set; }
 		[NotMapped]
 		public string cancel_reason { get; set; }
 		[NotMapped]

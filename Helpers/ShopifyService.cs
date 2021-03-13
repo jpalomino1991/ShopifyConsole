@@ -350,14 +350,14 @@ namespace ShopifyConsole.Models
             int orderNumber = 0;
             try
             {
-                IRestResponse response = CallShopify($"orders/3107676848285.json", Method.GET, null);
+                IRestResponse response = CallShopify($"orders.json?fulfillment_status=unfulfilled&created_at_min={DateTime.Now.AddDays(days * -1).ToString("yyyy-MM-dd")}&since_id=0", Method.GET, null);
                 if (response.StatusCode.ToString().Equals("OK"))
                 {
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
-                    if (SO.order != null)
+                    if (SO.orders != null)
                     {
-                        SO.orders = new List<Order>();
-                        SO.orders.Add(SO.order);
+                        /*SO.orders = new List<Order>();
+                        SO.orders.Add(SO.order);*/
                         foreach (Order order in SO.orders)
                         {
                             using (var context = new Models.AppContext(kellyConnStr))
@@ -451,6 +451,7 @@ namespace ShopifyConsole.Models
                                         order.shipping_price = order.shipping_lines[0].price;
                                         if(order.shipping_lines[0].code.Contains("Envío Express"))
                                         {
+                                            order.tipoEnvio = "Envío Express";
                                             if (order.created_at.DayOfWeek == DayOfWeek.Saturday || order.created_at.DayOfWeek == DayOfWeek.Sunday || (order.created_at.Hour == 16 && order.created_at.Minute > 0) || order.created_at.Hour > 16)
                                             {
                                                 DateTime date = AddBusinessDays(order.created_at,1);
@@ -463,12 +464,14 @@ namespace ShopifyConsole.Models
                                         {
                                             if (order.shipping_lines[0].code.ToUpper().Contains("RECOJO EN TIENDA"))
                                             {
+                                                order.tipoEnvio = "Recojo en Tienda";
                                                 order.fechaEstimada = "Se notificará para recojo: de 6 a 48 horas";
                                             }
                                             else
                                             {
                                                 if (order.shipping_lines[0].code.Contains('-'))
                                                 {
+                                                    order.tipoEnvio = "Entrega a Domicilio";
                                                     string city = order.shipping_lines[0].code.Split('-')[1].Split('(')[0].Trim();
                                                     ShippingTimes shippingTimes = context.ShippingTimes.Where(s => s.city.Contains(city)).FirstOrDefault();
                                                     order.fechaEstimada = calculateEstimateDate(order.created_at,shippingTimes);
@@ -589,10 +592,7 @@ namespace ShopifyConsole.Models
                 {
                     ProductShopify ps = new ProductShopify();
 
-                    string body = "<table width='100%'><tbody><tr><td><strong>Color: </strong>{0}</td><td><strong>Marca: </strong>{1}</td><td><strong>Taco:&nbsp;</strong>{2}</td></tr>" +
-                        "<tr><td><strong>Material:<span>&nbsp;</span></strong>{3}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{4}</td><td><strong>Material de Suela:<span>" +
-                        "&nbsp;</span></strong>{5}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{6}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{7}</td><td><br></td>" +
-                        "</tr></tbody></table>";
+                    string body = "";                    
 
                     string cp = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parent.CodigoProducto.ToLower());
                     string mat = parent.Material != null ? CultureInfo.CurrentCulture.TextInfo.ToTitleCase(string.Join(' ',parent.Material.ToLower().Split('/').ToList())) : "";
@@ -629,7 +629,37 @@ namespace ShopifyConsole.Models
                         else
                             ps.product_type = parent.SegmentoNivel4;
                     }
-                    ps.body_html = String.IsNullOrEmpty(parent.Description) ? String.Format(body,col,mar,parent.Taco,mat,matI,matS,parent.HechoEn,cp) : parent.Description;
+
+                    if (parent.SegmentoNivel4 != "Ropa" && parent.SegmentoNivel4 != "Accesorios")
+                    {
+                        body = "<table width='100%'><tbody><tr><td><strong>Color: </strong>{0}</td><td><strong>Marca: </strong>{1}</td><td><strong>Taco:&nbsp;</strong>{2}</td></tr>" +
+                        "<tr><td><strong>Material:<span>&nbsp;</span></strong>{3}</td><td><strong>Material Interior:<span>&nbsp;</span></strong>{4}</td><td><strong>Material de Suela:<span>" +
+                        "&nbsp;</span></strong>{5}</td></tr><tr><td><strong>Hecho en:<span>&nbsp;</span></strong>{6}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{7}</td><td><br></td>" +
+                        "</tr></tbody></table>";
+
+                        ps.body_html = String.IsNullOrEmpty(parent.Description) ? String.Format(body, col, mar, parent.Taco, mat, matI, matS, parent.HechoEn, cp) : parent.Description;
+                    }
+                    else
+                    {
+                        body = $"<table width='100%'><tbody><tr><td><strong>Color: </strong>{col}</td><td><strong>Marca: </strong>{mar}</td><td><strong>Material:<span>&nbsp;</span></strong>{mat}</td></tr><tr>";
+
+                        if (string.IsNullOrEmpty(parent.MaterialInterior) && string.IsNullOrEmpty(parent.MaterialSuela))
+                            body += $"<td><strong>Hecho en:<span>&nbsp;</span></strong>{parent.HechoEn}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{cp}</td><td><br></td><td><br></td></tr></tbody></table>";
+                        else
+                        {
+                            if (!string.IsNullOrEmpty(parent.MaterialSuela) && string.IsNullOrEmpty(parent.MaterialInterior))
+                                body += $"<td><strong>Medidas:<span>&nbsp;</span></strong>{matS}</td><td><strong>Hecho en:<span>&nbsp;</span></strong>{parent.HechoEn}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{cp}</td></tr></tbody></table>";
+                            else
+                            {
+                                if (!string.IsNullOrEmpty(parent.MaterialInterior) && string.IsNullOrEmpty(parent.MaterialSuela))
+                                    body += $"<td><strong>Material Interior:<span>&nbsp;</span></strong>{matI}</td><td><strong>Hecho en:<span>&nbsp;</span></strong>{parent.HechoEn}</td><td><strong>Modelo:<span>&nbsp;</span></strong>{cp}</td></tr></tbody></table>";
+                                else
+                                    body += $"<td><strong>Material Interior:<span>&nbsp;</span></strong>{matI}</td><td><strong>Medidas:<span>&nbsp;</span></strong>{matS}</td><td><strong>Hecho en:<span>&nbsp;</span></strong>{parent.HechoEn}</td></tr><tr><td><strong>Modelo:<span>&nbsp;</span></strong>{cp}</td><td><br></td><td><br></td></tr></tbody></table>";
+                            }
+                        }
+                        ps.body_html = body;
+                    }
+                    
                     ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{(parent.SegmentoNivel4 == "Accesorios" ? $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}" : ps.product_type)},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
