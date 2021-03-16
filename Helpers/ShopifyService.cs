@@ -455,7 +455,7 @@ namespace ShopifyConsole.Models
                                             if (order.created_at.DayOfWeek == DayOfWeek.Saturday || order.created_at.DayOfWeek == DayOfWeek.Sunday || (order.created_at.Hour == 16 && order.created_at.Minute > 0) || order.created_at.Hour > 16)
                                             {
                                                 DateTime date = AddBusinessDays(order.created_at,1);
-                                                order.fechaEstimada = $"Recibe el dia {date.ToString("dd/MM/yyyy")}";
+                                                order.fechaEstimada = $"Reibe el dia {date.ToString("dd/MM/yyyy")}";
                                             }
                                             else
                                                 order.fechaEstimada = $"Recibe el dia {order.created_at.ToString("dd/MM/yyyy")}";
@@ -558,7 +558,7 @@ namespace ShopifyConsole.Models
         {
             DateTime beginDate = AddBusinessDays(date, shippingTimes.beginDay);
             DateTime endDate = AddBusinessDays(date, shippingTimes.endDay);
-            return $"Recibe entre el {beginDate.ToString("dd/MM/yyyy")} y el {endDate.ToString("dd/MM/yyyy")}"; ;
+            return $"Entre el {beginDate.ToString("dd/MM/yyyy")} y el {endDate.ToString("dd/MM/yyyy")}"; ;
         }
 
         public OrderStatus createState(string orderId,string status)
