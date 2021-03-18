@@ -29,6 +29,7 @@ namespace ShopifyConsole.Models
 		public string fulfillment_id { get; set; }
 		public decimal shipping_price { get; set; }
 		public string tipoEnvio { get; set; }
+		public string customer_address_id { get; set; }
 		[NotMapped]
 		public string cancel_reason { get; set; }
 		[NotMapped]

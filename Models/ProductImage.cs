@@ -9,5 +9,6 @@ namespace ShopifyConsole.Models
         public string product_id { get; set; }
         public string alt { get; set; }
         public string src { get; set; }
+        public int position { get; set; }
     }
 }

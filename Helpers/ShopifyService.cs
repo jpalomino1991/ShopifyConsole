@@ -187,6 +187,7 @@ namespace ShopifyConsole.Models
                         pi.product_id = product.id;
                         pi.src = img.src;
                         pi.alt = img.alt;
+                        pi.position = img.position;
 
                         context.ProductImage.Add(pi);
                     }
@@ -356,8 +357,8 @@ namespace ShopifyConsole.Models
                     MainOrder SO = JsonConvert.DeserializeObject<MainOrder>(response.Content);
                     if (SO.orders != null)
                     {
-                        /*SO.orders = new List<Order>();
-                        SO.orders.Add(SO.order);*/
+                        //SO.orders = new List<Order>();
+                        //SO.orders.Add(SO.order);
                         foreach (Order order in SO.orders)
                         {
                             using (var context = new Models.AppContext(kellyConnStr))
@@ -445,11 +446,12 @@ namespace ShopifyConsole.Models
                                     order.customer.default_address.customer_id = order.customer.id;
                                     order.billing_address.order_id = order.id;
                                     order.shipping_address.order_id = order.id;
+                                    order.customer_address_id = order.customer.default_address.id;
 
                                     if(order.shipping_lines.Count > 0)
                                     {
                                         order.shipping_price = order.shipping_lines[0].price;
-                                        if(order.shipping_lines[0].code.Contains("Envío Express"))
+                                        if(order.shipping_lines[0].code.ToUpper().Contains("ENVÍO EXPRESS"))
                                         {
                                             order.tipoEnvio = "Envío Express";
                                             if (order.created_at.DayOfWeek == DayOfWeek.Saturday || order.created_at.DayOfWeek == DayOfWeek.Sunday || (order.created_at.Hour == 16 && order.created_at.Minute > 0) || order.created_at.Hour > 16)
