@@ -457,7 +457,7 @@ namespace ShopifyConsole.Models
                                             if (order.created_at.DayOfWeek == DayOfWeek.Saturday || order.created_at.DayOfWeek == DayOfWeek.Sunday || (order.created_at.Hour == 16 && order.created_at.Minute > 0) || order.created_at.Hour > 16)
                                             {
                                                 DateTime date = AddBusinessDays(order.created_at,1);
-                                                order.fechaEstimada = $"Reibe el dia {date.ToString("dd/MM/yyyy")}";
+                                                order.fechaEstimada = $"Recibe el dia {date.ToString("dd/MM/yyyy")}";
                                             }
                                             else
                                                 order.fechaEstimada = $"Recibe el dia {order.created_at.ToString("dd/MM/yyyy")}";
@@ -754,7 +754,7 @@ namespace ShopifyConsole.Models
                         variant.id = child.Id;
                         variant.sku = child.CodigoSistema;
                         variant.price = promoPrice == "" ? child.PrecioTV : decimal.Parse(promoPrice);
-                        if (parent.SegmentoNivel4 != "Accesorios")
+                        if (parent.SegmentoNivel4 != "Accesorios" || lsChild.Count > 1)
                             variant.option1 = child.Talla.ToString();
                         else
                             variant.option1 = "Talla única";
