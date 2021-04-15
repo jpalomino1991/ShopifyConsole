@@ -267,6 +267,8 @@ namespace ShopifyConsole.Models
                 DateTime end = DateTime.Now;
                 RegisterLog(start, end, guid, "Actualizar Stock", $"Se han actualizado {lsStock.Count} productos", false);
                 logger.Error(e, "Error updating stock");
+                string html = $"<font>El siguiente error se ha detectado durante el proceso: </font><br><br><font>{e.Message}</font>";
+                SendEmail(html, "error", "Ha ocurrido un error en el proceso Actualizar Stock");
                 return;
             }
         }
@@ -319,6 +321,8 @@ namespace ShopifyConsole.Models
                 DateTime end = DateTime.Now;
                 RegisterLog(start, end, guid, "Actualizar Precio", $"Se han actualizado {lsPrice.Count} productos", false);
                 logger.Error(e, "Error updating price");
+                string html = $"<font>El siguiente error se ha detectado durante el proceso: </font><br><br><font>{e.Message}</font>";
+                SendEmail(html, "error", "Ha ocurrido un error en el proceso Actualizar Precio");
                 return;
             }
         }
@@ -522,6 +526,8 @@ namespace ShopifyConsole.Models
                 DateTime end = DateTime.Now;
                 RegisterLog(start, end, guid, "Bajada de Ordenes", $"Se ha bajado {orderNumber} ordenes", false);
                 logger.Error(e, "Error downloading orders");
+                string html = $"<font>El siguiente error se ha detectado durante el proceso: </font><br><br><font>{e.Message}</font>";
+                SendEmail(html, "error", "Ha ocurrido un error en el proceso Bajada de Ordenes");
                 return;
             }
         }
@@ -843,6 +849,8 @@ namespace ShopifyConsole.Models
                 DateTime end = DateTime.Now;
                 RegisterLog(start, end, guid, "Actualizar Productos", $"Se ha subido {newProd} nuevos productos y actualizado {prods} productos", false);
                 logger.Error(e,"Error uploading product in general");
+                string html = $"<font>El siguiente error se ha detectado durante el proceso: </font><br><br><font>{e.Message}</font>";
+                SendEmail(html,"error","Ha ocurrido un error en el proceso Actualizar Producto");
                 return;
             }
         }
@@ -1206,7 +1214,7 @@ namespace ShopifyConsole.Models
                 }
                 if(lsDup.Count > 0)
                 {
-                    string html = "<font>Se ha encontrado Producto(s) duplicado(s): </font><br><br>";
+                    string html = "<font>Se ha encontrado Producto(s) duplicado(s) favor de rectificar: </font><br><br>";
                     html += "<table style=\"border-collapse:collapse; text-align:center;\" >";
                     html += "<tr style=\"background-color:#6FA1D2; color:#ffffff;\">";
                     html += "<td style=\" border-color:#5c87b2; border-style:solid; border-width:thin; padding: 5px;\">Codigo Padre</td><td style=\" border-color:#5c87b2; border-style:solid; border-width:thin; padding: 5px;\">Descripción Producto</td></tr>";
