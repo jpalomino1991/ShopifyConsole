@@ -12,6 +12,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 
 namespace ShopifyConsole.Models
@@ -666,7 +667,7 @@ namespace ShopifyConsole.Models
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
                     ps.published_scope = "global";
-                    if(parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")
+                    if (parent.SegmentoNivel4 == "Pantuflas" || parent.SegmentoNivel4 == "Alpargatas")
                     {
                         ps.title = $"{parent.SegmentoNivel4} {col} {cp}";
                         ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel4} {cp} {mat} {col} {mar}";
@@ -684,7 +685,7 @@ namespace ShopifyConsole.Models
                         }
                         else
                         {
-                            if (parent.SegmentoNivel4 == "Accesorios")
+                            if (parent.SegmentoNivel4 == "Accesorios" || parent.SegmentoNivel4 == "Ropa")
                             {
                                 ps.title = $"{parent.SegmentoNivel5} {col} {cp}";
                                 ps.metafields_global_description_tag = $"{ten} {oca} {(parent.Campaña == null ? "" : parent.Campaña)} {sex} {parent.SegmentoNivel5} {cp} {mat} {col} {mar}";
@@ -787,17 +788,18 @@ namespace ShopifyConsole.Models
                         IRestResponse response = CallShopify("products/" + parent.Id + ".json", Method.PUT, oJson);
                         if (response.StatusCode.ToString().Equals("OK"))
                         {
-                            MasterProduct mp = JsonConvert.DeserializeObject<MasterProduct>(response.Content);
-                            if (mp.product != null)
-                            {
-                                logger.Info("Uploading product: " + parent.CodigoPadre);
-                                using (var context = new Models.AppContext(kellyConnStr))
-                                {
-                                    InsertProduct(mp.product, context, true);
-                                    UpdateStockForOne(mp.product.variants);
-                                }
-                                logger.Info("Product uploaded");
-                            }
+                            logger.Info("Product uploaded: " + parent.CodigoPadre);
+                            //MasterProduct mp = JsonConvert.DeserializeObject<MasterProduct>(response.Content);
+                            //if (mp.product != null)
+                            //{
+                            //    logger.Info("Uploading product: " + parent.CodigoPadre);
+                            //    using (var context = new Models.AppContext(kellyConnStr))
+                            //    {
+                            //        InsertProduct(mp.product, context, true);
+                            //        UpdateStockForOne(mp.product.variants);
+                            //    }
+                            //    logger.Info("Product uploaded");
+                            //}
                         }
                         else
                         {
@@ -1155,6 +1157,73 @@ namespace ShopifyConsole.Models
                     log.Status = "Con errores";
                 context.Logs.Add(log);
                 context.SaveChanges();
+            }
+        }
+
+        public void SendEmail(string bodyHtml,string type, string subject)
+        {
+            try
+            {
+                MailMessage message = new MailMessage();
+                SmtpClient smtp = new SmtpClient();
+                message.From = new MailAddress("no-reply@kellys.com.pe");
+
+                List<SendEmail> lsEmail = new List<SendEmail>();
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    lsEmail = context.sendEmail.Where(s => s.Type.Equals(type)).ToList();
+                }
+
+                foreach(SendEmail email in lsEmail)
+                {
+                    message.To.Add(new MailAddress(email.Email));
+                }
+                
+                message.Subject = subject;
+                message.IsBodyHtml = true; //to make message body as html  
+                message.Body = bodyHtml;
+                smtp.Port = 587;
+                smtp.Host = "mail.kellys.com.pe"; //for gmail host  
+                smtp.EnableSsl = false;
+                smtp.Credentials = new NetworkCredential("no-reply@kellys.com.pe", "vY(J(wVOCW?L");
+                smtp.Send(message);
+            }
+            catch(Exception e)
+            {
+                logger.Error(e, "Error sending email");
+                return;
+            }
+        }
+
+        public void generateDuplicateTable()
+        {
+            try
+            {
+                List<Duplicate> lsDup = new List<Duplicate>();
+                using (var context = new Models.AppContext(kellyConnStr))
+                {
+                    lsDup = context.Duplicate.FromSqlInterpolated($"GetDuplicateProduct").ToList();
+                }
+                if(lsDup.Count > 0)
+                {
+                    string html = "<font>Se ha encontrado Producto(s) duplicado(s): </font><br><br>";
+                    html += "<table style=\"border-collapse:collapse; text-align:center;\" >";
+                    html += "<tr style=\"background-color:#6FA1D2; color:#ffffff;\">";
+                    html += "<td style=\" border-color:#5c87b2; border-style:solid; border-width:thin; padding: 5px;\">Codigo Padre</td><td style=\" border-color:#5c87b2; border-style:solid; border-width:thin; padding: 5px;\">Descripción Producto</td></tr>";
+
+                    foreach(Duplicate dup in lsDup)
+                    {
+                        html += $"<tr style=\"color:#555555;\"><td style=\" border-color:#5c87b2; border-style:solid; border-width:thin; padding: 5px;\">{dup.CodigoPadre}</td><td style=\" border-color:#5c87b2; border-style:solid; border-width:thin; padding: 5px;\">{dup.DescripcionPadre}</td></tr>";
+                    }
+
+                    html += "</table>";
+                    SendEmail(html, "duplicate", "Producto(s) duplicado(s)");
+                }
+            }
+            catch(Exception e)
+            {
+                logger.Error(e, "Error on getting duplicate product");
+                return;
             }
         }
     }

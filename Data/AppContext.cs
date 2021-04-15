@@ -19,6 +19,7 @@ namespace ShopifyConsole.Models
         public virtual DbSet<ProductKelly> ProductKelly { get; set; }
         public virtual DbSet<KellyChild> KellyChild { get; set; }
         public virtual DbSet<Filter> Filter { get; set; }
+        public virtual DbSet<Duplicate> Duplicate { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderStatus> OrderStatus { get; set; }
         public DbSet<Item> Item { get; set; }
@@ -32,6 +33,7 @@ namespace ShopifyConsole.Models
         public DbSet<ProductType> ProductType { get; set; }
         public DbSet<Logs> Logs { get; set; }
         public DbSet<LogDetail> LogDetail { get; set; }
+        public DbSet<SendEmail> sendEmail { get; set; }
         public virtual DbSet<Sku> Sku { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -71,6 +73,11 @@ namespace ShopifyConsole.Models
                 {
                     eb.HasNoKey();
                     eb.ToTable("Sku");
+                })
+                .Entity<Duplicate>(eb =>
+                {
+                    eb.HasNoKey();
+                    eb.ToTable("Duplicate");
                 });
         }
     }
