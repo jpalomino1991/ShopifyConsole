@@ -34,11 +34,12 @@ namespace ShopifyConsole.Models
         public DbSet<Logs> Logs { get; set; }
         public DbSet<LogDetail> LogDetail { get; set; }
         public DbSet<SendEmail> sendEmail { get; set; }
+        public DbSet<Categoria> Categoria { get; set; }
         public virtual DbSet<Sku> Sku { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(sqlConn);
+            optionsBuilder.UseSqlServer(sqlConn, options => { options.EnableRetryOnFailure(); options.CommandTimeout(180); });
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

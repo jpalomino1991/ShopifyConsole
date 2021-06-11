@@ -49,7 +49,7 @@ namespace ShopifyConsole
                         Sservice.GetProductImage();
                         Sservice.GetProducts();
                         Sservice.UploadProduct(result,true);
-                        Sservice.generateDuplicateTable();
+                        //Sservice.generateDuplicateTable();
                         break;
                     case "/IMAGE":
                         Sservice.GetProductImage();

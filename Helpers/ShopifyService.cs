@@ -591,7 +591,7 @@ namespace ShopifyConsole.Models
                 List<ProductKelly> lsParent = new List<ProductKelly>();
                 using (var context = new Models.AppContext(kellyConnStr))
                 {
-                    if(all)
+                    if (all)
                         lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoAllForShopify").ToList();
                     else
                         lsParent = context.ProductKelly.FromSqlInterpolated($"GetProductInfoForShopify @FechaProducto = {DateTime.Now.AddDays(days * -1).ToString("yyyy/MM/dd")}").ToList();
@@ -632,8 +632,8 @@ namespace ShopifyConsole.Models
                         }
                     }
                     else
-                    { 
-                        if(parent.SegmentoNivel4 == "Accesorios")
+                    {
+                        if(parent.SegmentoNivel4 == "Accesorios" || parent.SegmentoNivel4 == "Ropa")
                             ps.product_type = parent.SegmentoNivel5;
                         else
                             ps.product_type = parent.SegmentoNivel4;
@@ -669,7 +669,7 @@ namespace ShopifyConsole.Models
                         ps.body_html = body;
                     }
                     
-                    ps.tags = String.IsNullOrEmpty(parent.Tags) ? $"{(parent.SegmentoNivel4 == "Accesorios" ? $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}" : ps.product_type)},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{parent.Taco}" : parent.Tags;
+                    ps.tags = string.IsNullOrEmpty(parent.Tags) ? $"{(parent.SegmentoNivel4 == "Accesorios" || parent.SegmentoNivel4 == "Ropa" ? $"{parent.SegmentoNivel4},{parent.SegmentoNivel5}" : ps.product_type)},{mat},{col},{cp},{mar},{parent.SegmentoNivel1},{(sex == "Unisex" ? "Hombre,Mujer" : (sex != parent.SegmentoNivel2 ? "Kids," + sex : sex))},{parent.SegmentoNivel4},{parent.CodigoPadre},{ten},{oca},{(parent.Taco == "00" ? "" : parent.Taco)}" : parent.Tags;
                     ps.handle = $"{cp}-{parent.SegmentoNivel4}-{sex}-{col}-{mar}";
                     ps.id = parent.Id;
                     ps.published_scope = "global";
