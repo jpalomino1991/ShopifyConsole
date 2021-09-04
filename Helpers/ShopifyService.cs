@@ -29,6 +29,7 @@ namespace ShopifyConsole.Models
         private string remotePath;
         private string smtpUser;
         private string smtpPass;
+        private int headerNumber;
         public ShopifyService(string kellyConnStr,Logger logger)
         {            
             this.kellyConnStr = kellyConnStr;            
@@ -44,6 +45,7 @@ namespace ShopifyConsole.Models
                 this.webAPI = web.WebAPI;
                 this.webPassword = web.WebPassword;
                 this.locationId = web.LocationId;
+                this.headerNumber = web.HeaderNumber;
             }                
         }
         public void GetProducts()
@@ -78,7 +80,7 @@ namespace ShopifyConsole.Models
 
                     if (response.StatusCode.ToString().Equals("OK"))
                     {
-                        string header = response.Headers[17].Value.ToString();
+                        string header = response.Headers[this.headerNumber].Value.ToString();
                         
                         foreach(string content in header.Split(","))
                         {

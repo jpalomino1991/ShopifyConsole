@@ -16,5 +16,6 @@ namespace ShopifyConsole.Models
         public string SMTPUser { get; set; }
         public string SMTPPassword { get; set; }
         public string SMTPURL { get; set; }
+        public int HeaderNumber { get; set; }
     }
 }
